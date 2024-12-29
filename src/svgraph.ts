@@ -14,6 +14,8 @@ export type Config = {
 export type Style = {
 	xAxisSize?: number
 	yAxisSize?: number
+	minSpacePerXLabel?: number
+	minSpacePerYLabel?: number
 }
 
 export default class SVGraph {
@@ -27,6 +29,12 @@ export default class SVGraph {
 	maxX: number
 	maxY: number
 	private resizeObserver: ResizeObserver
+
+	getXLabelInterval = (width: number): number =>
+		Math.ceil(this.xLabels.length / (width / this.style.minSpacePerXLabel))
+
+	getYLabelInterval = (height: number): number =>
+		Math.ceil(this.yLabels.length / (height / this.style.minSpacePerYLabel))
 
 	constructor(config: Config) {
 		this.elem = svg({ width: "100%", height: "100%", overflow: "visible" })
@@ -44,12 +52,15 @@ export default class SVGraph {
 		this.maxX = this.data.map(({ values }) => values.length - 1).max()
 		this.maxY = this.data[0].values.max()
 
-		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ values }) => values.keys().toArray())).values().toArray().sort().map((i) => new NumberLabel(i))
+		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ values }) => values.keys().toArray()))
+			.values().toArray().sort((a, b) => a - b).map((i) => new NumberLabel(i))
 		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
 
 		this.style = {
 			xAxisSize: style?.xAxisSize ?? 30,
-			yAxisSize: style?.yAxisSize ?? 30
+			yAxisSize: style?.yAxisSize ?? 30,
+			minSpacePerXLabel: style?.minSpacePerXLabel ?? 50,
+			minSpacePerYLabel: style?.minSpacePerYLabel ?? 50,
 		}
 
 		if (redraw) this.draw(this.elem.clientWidth, this.elem.clientHeight)
@@ -73,21 +84,23 @@ export default class SVGraph {
 	private xAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "xaxis" },
 			line({ from: [x, y], to: [x + width, y], stroke: "black" }),
-			...this.xLabels.map(step => text({
-				x: x + step.getPos(this.maxX) * width,
-				y: y + 20,
-				"text-anchor": "middle"
-			}, new Text(step.text)))
+			...this.xLabels.filter((_, i) => i % this.getXLabelInterval(width) == 0)
+				.map(step => text({
+					x: x + step.getPos(this.maxX) * width,
+					y: y + 20,
+					"text-anchor": "middle"
+				}, new Text(step.text)))
 		)
 
 	private yAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "yaxis" },
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "black" }),
-			...this.yLabels.map(step => text({
-				x: x + width - 10,
-				y: y + (1 - step.getPos(this.maxY)) * height + 5,
-				"text-anchor": "end"
-			}, new Text(step.text)))
+			...this.yLabels.filter((_, i) => i % this.getYLabelInterval(height) == 0)
+				.map(step => text({
+					x: x + width - 10,
+					y: y + (1 - step.getPos(this.maxY)) * height + 5,
+					"text-anchor": "end"
+				}, new Text(step.text)))
 		)
 
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
