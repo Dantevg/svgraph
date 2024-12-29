@@ -1,3 +1,4 @@
+import { turbo } from "./colourschemes"
 import { Label, NumberLabel } from "./label"
 import { g, line, polyline, svg, text } from "./svg"
 
@@ -103,14 +104,14 @@ export default class SVGraph {
 			})),
 		)
 
-	private lines(x: number, y: number, width: number, height: number): SVGElement {
-		const elem = g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" })
-		for (const { name, values } of this.data) {
-			const points = values.map((y, x) => [x * width / this.maxX, (1 - y / this.maxY) * height] as [number, number])
-			elem.appendChild(polyline({ points, fill: "none", stroke: "black" }))
-		}
-		return elem
-	}
+	private lines = (x: number, y: number, width: number, height: number): SVGElement =>
+		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" },
+			...this.data.map(({ values }, i) => {
+				const colour = turbo[Math.floor((i + 1) / (this.data.length + 1) * turbo.length)]
+				const points = values.map((y, x) => [x * width / this.maxX, (1 - y / this.maxY) * height] as [number, number])
+				return polyline({ points, fill: "none", stroke: colour })
+			})
+		)
 }
 
 declare global {
