@@ -12,6 +12,7 @@ export function element(name: string, attrs: { [key: string]: any }, children: N
 type stringable = string | number | boolean
 
 type DefaultAttrs = {
+	id?: string,
 	class?: string
 	transform?: string,
 	fill?: string
@@ -30,7 +31,7 @@ export const line = (attrs: { from: [stringable, stringable], to: [stringable, s
 export const polyline = (attrs: { points: [number, number][] } & DefaultAttrs, ...children: Node[]) =>
 	element("polyline", { ...attrs, points: attrs.points.map(([x, y]) => `${x},${y}`).join(" ") }, children)
 
-export const rect = (attrs: { x?: string, y?: string, width: string, height: string, rx?: string, ry?: string } & DefaultAttrs, ...children: Node[]) =>
+export const rect = (attrs: { x?: stringable, y?: stringable, width: stringable, height: stringable, rx?: stringable, ry?: stringable } & DefaultAttrs, ...children: Node[]) =>
 	element("rect", attrs, children)
 
 export const text = (attrs: { x: stringable, y: stringable, dx?: stringable, dy?: stringable, rotate?: number[], lengthAdjust?: string, textLength?: stringable, "text-anchor"?: "start" | "middle" | "end" } & DefaultAttrs, ...children: Node[]) =>

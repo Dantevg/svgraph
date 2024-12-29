@@ -1,5 +1,5 @@
 import { Label, NumberLabel } from "./label"
-import { g, line, polyline, rect, svg, text } from "./svg"
+import { g, line, polyline, svg, text } from "./svg"
 
 export { Label, NumberLabel } from "./label"
 
@@ -27,7 +27,6 @@ export default class SVGraph {
 	maxY: number
 	private resizeObserver: ResizeObserver
 
-
 	constructor(config: Config) {
 		this.elem = svg({ width: "100%", height: "100%", overflow: "visible" })
 		this.update(config, false)
@@ -46,7 +45,7 @@ export default class SVGraph {
 
 		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ values }) => values.keys().toArray())).values().toArray().sort().map((i) => new NumberLabel(i))
 		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
-		
+
 		this.style = {
 			xAxisSize: style?.xAxisSize ?? 30,
 			yAxisSize: style?.yAxisSize ?? 30
@@ -58,13 +57,13 @@ export default class SVGraph {
 	draw(width: number, height: number) {
 		this.elem.innerHTML = ""
 
-		this.elem.appendChild(rect({ width: "100%", height: "100%", fill: "#0001" }))
-		this.elem.appendChild(this.lines(width - this.style.yAxisSize, height - this.style.xAxisSize))
-		this.elem.appendChild(this.axes(width, height))
+		this.elem.appendChild(this.grid(this.style.yAxisSize, 0, width - this.style.yAxisSize, height - this.style.xAxisSize))
+		this.elem.appendChild(this.axes(0, 0, width, height))
+		this.elem.appendChild(this.lines(this.style.yAxisSize, 0, width - this.style.yAxisSize, height - this.style.xAxisSize))
 	}
 
-	private axes(width: number, height: number): SVGElement {
-		return g({ class: "axes" },
+	private axes(x: number, y: number, width: number, height: number): SVGElement {
+		return g({ class: "axes", transform: `translate(${x}, ${y})` },
 			this.xAxis(this.style.yAxisSize, height - this.style.xAxisSize, width - this.style.yAxisSize, this.style.xAxisSize),
 			this.yAxis(0, 0, this.style.yAxisSize, height - this.style.xAxisSize)
 		)
@@ -85,13 +84,27 @@ export default class SVGraph {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "black" }),
 			...this.yLabels.map(step => text({
 				x: x + width - 10,
-				y: y + height - step.getPos(this.maxY) * height + 5,
+				y: y + (1 - step.getPos(this.maxY)) * height + 5,
 				"text-anchor": "end"
 			}, new Text(step.text)))
 		)
 
-	private lines(width: number, height: number): SVGElement {
-		const elem = g({ class: "lines", transform: `translate(${this.style.yAxisSize}, 0)`, "stroke-width": "2" })
+	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
+		g({ class: "grid", transform: `translate(${x}, ${y})` },
+			...this.xLabels.map(step => line({
+				from: [step.getPos(this.maxX) * width, 0],
+				to: [step.getPos(this.maxX) * width, height],
+				stroke: "#0004"
+			})),
+			...this.yLabels.map(step => line({
+				from: [0, (1 - step.getPos(this.maxY)) * height],
+				to: [width, (1 - step.getPos(this.maxY)) * height],
+				stroke: "#0004"
+			})),
+		)
+
+	private lines(x: number, y: number, width: number, height: number): SVGElement {
+		const elem = g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" })
 		for (const { name, values } of this.data) {
 			const points = values.map((y, x) => [x * width / this.maxX, (1 - y / this.maxY) * height] as [number, number])
 			elem.appendChild(polyline({ points, fill: "none", stroke: "black" }))
