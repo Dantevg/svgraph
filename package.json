@@ -1,0 +1,20 @@
+{
+  "name": "svgraph",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "RedPolygon",
+  "license": "MIT",
+  "description": "",
+  "devDependencies": {
+    "@itsjavi/jsx-runtime": "github:Dantevg/jsx-runtime",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.29.1",
+    "tslib": "^2.8.1"
+  }
+}
