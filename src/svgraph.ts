@@ -1,20 +1,36 @@
 import { Label, NumberLabel } from "./label"
 import { g, line, polyline, rect, svg, text } from "./svg"
 
+export { Label, NumberLabel } from "./label"
+
+export type Config = {
+	data: { [category: string]: number[] }
+	xLabels?: Label[]
+	yLabels?: Label[]
+	style?: Style
+}
+
+export type Style = {
+	xAxisSize?: number
+	yAxisSize?: number
+}
+
 export default class SVGraph {
 	elem: SVGElement
+
 	data: { name: string, values: number[] }[]
-	maxX: number
-	maxY: number
 	xLabels: Label[]
 	yLabels: Label[]
+	style: Style
+
+	maxX: number
+	maxY: number
 	private resizeObserver: ResizeObserver
 
-	axisSize = 40
 
-	constructor({ data }: { data: { [category: string]: number[] } }) {
+	constructor(config: Config) {
 		this.elem = svg({ width: "100%", height: "100%", overflow: "visible" })
-		this.update(data, false)
+		this.update(config, false)
 
 		this.resizeObserver = new ResizeObserver((entries) => {
 			this.draw(entries[0].contentBoxSize[0].inlineSize, entries[0].contentBoxSize[0].blockSize)
@@ -22,14 +38,19 @@ export default class SVGraph {
 		this.resizeObserver.observe(this.elem, { box: "content-box" })
 	}
 
-	update(lines: { [category: string]: number[] }, redraw = true) {
-		this.data = Object.entries(lines).sort((a, b) => b[1].max() - a[1].max()).map(([name, values]) => ({ name, values }))
+	update({ data, xLabels, yLabels, style }: Config, redraw = true) {
+		this.data = Object.entries(data).sort((a, b) => b[1].max() - a[1].max()).map(([name, values]) => ({ name, values }))
 
 		this.maxX = this.data.map(({ values }) => values.length - 1).max()
 		this.maxY = this.data[0].values.max()
 
-		this.xLabels = new Set(this.data.flatMap(({ values }) => values.keys().toArray())).values().toArray().sort().map((i) => new NumberLabel(i))
-		this.yLabels = [0, 10, 30].map(i => new NumberLabel(i))
+		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ values }) => values.keys().toArray())).values().toArray().sort().map((i) => new NumberLabel(i))
+		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
+		
+		this.style = {
+			xAxisSize: style?.xAxisSize ?? 30,
+			yAxisSize: style?.yAxisSize ?? 30
+		}
 
 		if (redraw) this.draw(this.elem.clientWidth, this.elem.clientHeight)
 	}
@@ -37,15 +58,15 @@ export default class SVGraph {
 	draw(width: number, height: number) {
 		this.elem.innerHTML = ""
 
-		this.elem.appendChild(rect({ width: "100%", height: "100%", fill: "#EEE" }))
-		this.elem.appendChild(this.lines(width - this.axisSize, height - this.axisSize))
+		this.elem.appendChild(rect({ width: "100%", height: "100%", fill: "#0001" }))
+		this.elem.appendChild(this.lines(width - this.style.yAxisSize, height - this.style.xAxisSize))
 		this.elem.appendChild(this.axes(width, height))
 	}
 
 	private axes(width: number, height: number): SVGElement {
 		return g({ class: "axes" },
-			this.xAxis(this.axisSize, height - this.axisSize, width - this.axisSize, this.axisSize),
-			this.yAxis(0, 0, this.axisSize, height - this.axisSize)
+			this.xAxis(this.style.yAxisSize, height - this.style.xAxisSize, width - this.style.yAxisSize, this.style.xAxisSize),
+			this.yAxis(0, 0, this.style.yAxisSize, height - this.style.xAxisSize)
 		)
 	}
 
@@ -64,13 +85,13 @@ export default class SVGraph {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "black" }),
 			...this.yLabels.map(step => text({
 				x: x + width - 10,
-				y: y + height - step.getPos(this.maxY) * height,
+				y: y + height - step.getPos(this.maxY) * height + 5,
 				"text-anchor": "end"
 			}, new Text(step.text)))
 		)
 
 	private lines(width: number, height: number): SVGElement {
-		const elem = g({ class: "lines", transform: `translate(${this.axisSize}, 0)`, "stroke-width": "2" })
+		const elem = g({ class: "lines", transform: `translate(${this.style.yAxisSize}, 0)`, "stroke-width": "2" })
 		for (const { name, values } of this.data) {
 			const points = values.map((y, x) => [x * width / this.maxX, (1 - y / this.maxY) * height] as [number, number])
 			elem.appendChild(polyline({ points, fill: "none", stroke: "black" }))

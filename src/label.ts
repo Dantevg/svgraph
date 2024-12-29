@@ -10,3 +10,5 @@ export class NumberLabel implements Label {
 
 	getPos(max: number) { return this.value / max }
 }
+
+// TODO: date labels etc
