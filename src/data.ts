@@ -1,5 +1,5 @@
 import { parse } from "csv-parse/browser/esm/sync"
-import { Label, NumberLabel } from "./label"
+import { DateLabel, Label, NumberLabel } from "./label"
 
 type StatData = { Date: string, Player: string }[]
 
@@ -22,11 +22,14 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 		.flatMap((row, i, rows) => {
 			const days = datesBetween(new Date(row.label), new Date(rows[i + 1]?.label ?? dates.at(-1)), i == rows.length - 1)
 			// return days.map(day => ({ label: day.toISOString().split("T")[0], value: row.value }))
-			return days.map(day => ({ label: new NumberLabel(Math.floor(day.valueOf() / 1000 / 60 / 60 / 24)), value: row.value }))
+			return days.map(day => ({ label: new DateLabel(day), value: row.value }))
+			// return days.map(day => ({ label: new NumberLabel(Math.floor(day.valueOf() / 1000 / 60 / 60 / 24)), value: row.value }))
 		})
-	// Add first 0 for everyone
+	// Add first 0
+	const dayBeforeFirst = linedata[0].label.value
+	dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1)
 	linedata.unshift({
-		label: new NumberLabel(linedata[0].label.value - 1),
+		label: new DateLabel(dayBeforeFirst),
 		value: 0,
 	})
 	return linedata
