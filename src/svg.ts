@@ -1,6 +1,6 @@
 const ns = "http://www.w3.org/2000/svg"
 
-export function element(name: string, attrs: { [key: string]: any }, children: Node[] = []): SVGElement {
+function element(name: string, attrs: { [key: string]: any }, children: Node[] = []): SVGElement {
 	const elem = document.createElementNS(ns, name)
 	for (const key in attrs) {
 		if (attrs[key] !== undefined) elem.setAttribute(key, attrs[key])
@@ -17,7 +17,7 @@ type DefaultAttrs = {
 	transform?: string,
 	fill?: string
 	stroke?: string
-	"stroke-width"?: string
+	"stroke-width"?: stringable
 }
 
 export const svg = (attrs: { width: string, height: string, viewBox?: string, preserveAspectRatio?: string, overflow?: string } & DefaultAttrs, ...children: Node[]) =>
