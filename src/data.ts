@@ -27,8 +27,8 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 		})
 
 	// Add first 0
-	const dayBeforeFirst = linedata[0].label.value
-	dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1)
+	const dayBeforeFirst = new Date(linedata[0].label.value)
+	dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 2)
 	linedata.unshift({
 		label: new DateLabel(dayBeforeFirst),
 		value: 0,

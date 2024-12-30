@@ -6,6 +6,7 @@ import { circle, g, line, polyline, rect, svg, text } from "./svg"
 export { Label, NumberLabel } from "./label"
 export { getData } from "./data"
 
+// TODO: make y-`value` also a Label so that it can be displayed as any unit (e.g. ticks, km, percentage etc)
 export type Point = { label: Label, value: number }
 
 export type Config = {
@@ -36,22 +37,20 @@ export default class SVGraph extends HTMLElement {
 	guidePoints: SVGCircleElement[]
 
 	data: { name: string, colour: string, points: Point[] }[]
-	xLabels: Label[]
-	yLabels: Label[]
 	styles: Styles
+	xaxis: { labels: Label[], range: [Label, Label] }
+	yaxis: { labels: Label[], range: [number, number] }
 
-	xRange: [Label, Label]
-	maxY: number
 	private resizeObserver: ResizeObserver
 
 	private getXLabelInterval = (width: number): number =>
-		Math.ceil(this.xLabels.length / (width / this.styles.xAxis.labelSpacing))
+		Math.ceil(this.xaxis.labels.length / (width / this.styles.xAxis.labelSpacing))
 
 	private getYLabelInterval = (height: number): number =>
-		Math.ceil(this.yLabels.length / (height / this.styles.yAxis.labelSpacing))
+		Math.ceil(this.yaxis.labels.length / (height / this.styles.yAxis.labelSpacing))
 
-	private getXLabels = (width: number): Label[] => this.xLabels.filter((_, i) => i % this.getXLabelInterval(width) == 0)
-	private getYLabels = (height: number): Label[] => this.yLabels.filter((_, i) => i % this.getYLabelInterval(height) == 0)
+	private getXLabels = (width: number): Label[] => this.xaxis.labels.filter((_, i) => i % this.getXLabelInterval(width) == 0)
+	private getYLabels = (height: number): Label[] => this.yaxis.labels.filter((_, i) => i % this.getYLabelInterval(height) == 0)
 
 	constructor(config: Config) {
 		super()
@@ -126,15 +125,17 @@ export default class SVGraph extends HTMLElement {
 			.sort((a, b) => b[1].at(-1).value - a[1].at(-1).value)
 			.map(([name, points], i, arr) => ({ name, points, colour: turbo[Math.floor((i + 1) / (arr.length + 1) * turbo.length)] }))
 
-		this.xRange = [
+		const xRange: [Label, Label] = [
 			this.data.map(({ points }) => points[0])[0].label,
 			this.data.map(({ points }) => points.at(-1)).at(-1).label,
 		]
-		this.maxY = this.data[0].points.maxByKey("value").value
+		const xLabels_ = xLabels ?? new Set(this.data.flatMap(({ points }) => points.map(x => x.label)))
+			.values().toArray().sort((a, b) => a.getPos(...xRange) - b.getPos(...xRange))
+		this.xaxis = { range: xRange, labels: xLabels_ }
 
-		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ points }) => points.map(x => x.label)))
-			.values().toArray().sort((a, b) => a.getPos(...this.xRange) - b.getPos(...this.xRange))
-		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
+		const yRange: [number, number] = [0, this.data[0].points.maxByKey("value").value]
+		const yLabels_ = yLabels ?? [new NumberLabel(yRange[0]), new NumberLabel(yRange[1])]
+		this.yaxis = { range: yRange, labels: yLabels_ }
 
 		this.styles = {
 			xAxis: {
@@ -181,7 +182,7 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "xaxis" },
 			line({ from: [x, y], to: [x + width, y], stroke: "white" }),
 			...this.getXLabels(width).map(step => text({
-				x: x + step.getPos(...this.xRange) * width,
+				x: x + step.getPos(...this.xaxis.range) * width,
 				y: y + 20,
 				transform: `rotate(${this.styles.xAxis.labelRotation})`,
 				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labelRotation),
@@ -194,7 +195,7 @@ export default class SVGraph extends HTMLElement {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
 			...this.getYLabels(height).map(step => text({
 				x: x + width - 10,
-				y: y + (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height + 5,
+				y: y + (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labelRotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
@@ -204,13 +205,13 @@ export default class SVGraph extends HTMLElement {
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
 			...this.getXLabels(width).map(step => line({
-				from: [step.getPos(...this.xRange) * width, 0],
-				to: [step.getPos(...this.xRange) * width, height],
+				from: [step.getPos(...this.xaxis.range) * width, 0],
+				to: [step.getPos(...this.xaxis.range) * width, height],
 				stroke: "#FFF4"
 			})),
 			...this.getYLabels(height).map(step => line({
-				from: [0, (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height],
-				to: [width, (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height],
+				from: [0, (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height],
+				to: [width, (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height],
 				stroke: "#FFF4"
 			})),
 		)
@@ -219,8 +220,8 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" },
 			...this.data.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
-					point.label.getPos(...this.xRange) * width,
-					(1 - point.value / this.maxY) * height
+					point.label.getPos(...this.xaxis.range) * width,
+					(1 - point.value / this.yaxis.range[1]) * height
 				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
@@ -233,13 +234,13 @@ export default class SVGraph extends HTMLElement {
 		const points = this.popupElem.update(
 			event.clientX, event.clientY,
 			(x - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width),
-			this.xRange,
+			this.xaxis.range,
 			this.data
 		)
 
 		for (let i = 0; i < points.length; i++) {
-			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xRange) * (rect.width - this.styles.yAxis.width) + this.styles.yAxis.width).toString())
-			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.maxY) * (rect.height - this.styles.xAxis.height)).toString())
+			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xaxis.range) * (rect.width - this.styles.yAxis.width) + this.styles.yAxis.width).toString())
+			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.yaxis.range[1]) * (rect.height - this.styles.xAxis.height)).toString())
 		}
 
 		this.guideLine.classList.add("active")
