@@ -26,7 +26,7 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 		})
 	// Add first 0 for everyone
 	linedata.unshift({
-		label: new NumberLabel(Math.floor(new Date(dates[0]).valueOf() / 1000 / 60 / 60 / 24)),
+		label: new NumberLabel(linedata[0].label.value - 1),
 		value: 0,
 	})
 	return linedata

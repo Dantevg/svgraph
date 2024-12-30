@@ -1,13 +1,15 @@
 import { turbo } from "./colourschemes"
 import { Label, NumberLabel } from "./label"
 import PopupElement from "./popup"
-import { g, line, polyline, rect, svg, text } from "./svg"
+import { circle, g, line, polyline, rect, svg, text } from "./svg"
 
 export { Label, NumberLabel } from "./label"
 export { getData } from "./data"
 
+export type Point = { label: Label, value: number }
+
 export type Config = {
-	data: { [category: string]: { label: Label, value: number }[] }
+	data: { [category: string]: Point[] }
 	xLabels?: Label[]
 	yLabels?: Label[]
 	styles?: Styles
@@ -25,7 +27,9 @@ export default class SVGraph extends HTMLElement {
 	popupElem: PopupElement
 	guideLine: SVGElement
 
-	data: { name: string, points: { label: Label, value: number }[] }[]
+	guidePoints: SVGCircleElement[]
+
+	data: { name: string, points: Point[] }[]
 	xLabels: Label[]
 	yLabels: Label[]
 	styles: Styles
@@ -70,6 +74,9 @@ export default class SVGraph extends HTMLElement {
 				display: none;
 			}
 			.guideline:not(.active) {
+				display: none;
+			}
+			.guideline:not(.active) ~ .guide-point {
 				display: none;
 			}
 		`
@@ -123,6 +130,15 @@ export default class SVGraph extends HTMLElement {
 		this.guideLine.setAttribute("y2", (height - this.styles.xAxisSize).toString())
 		this.svgElem.appendChild(this.axes(0, 0, width, height))
 		this.svgElem.appendChild(this.lines(this.styles.yAxisSize, 0, width - this.styles.yAxisSize, height - this.styles.xAxisSize))
+		
+		this.guidePoints = this.data.map(line => circle({
+			class: "guide-point",
+			cx: line.points[0].label.getPos(...this.xRange) + this.styles.yAxisSize,
+			cy: (1 - line.points[0].value / this.maxY) * (height - this.styles.xAxisSize),
+			r: 2,
+			fill: "white"
+		}))
+		this.svgElem.append(...this.guidePoints)
 
 		const area = rect({ x: this.styles.yAxisSize, y: 0, width: width - this.styles.yAxisSize, height: height - this.styles.xAxisSize, fill: "transparent" })
 		this.svgElem.appendChild(area)
@@ -184,15 +200,20 @@ export default class SVGraph extends HTMLElement {
 		)
 
 	private onMouseMove(event: MouseEvent) {
-		const rect = this.getBoundingClientRect()
+		const rect = this.svgElem.getBoundingClientRect()
 		const x = event.clientX - rect.left
 
-		this.popupElem.update(
+		const points = this.popupElem.update(
 			event.clientX, event.clientY,
 			(x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize),
 			this.xRange,
 			this.data
 		)
+		
+		for (let i = 0; i < points.length; i++) {
+			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xRange) * (rect.width - this.styles.yAxisSize) + this.styles.yAxisSize).toString())
+			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.maxY) * (rect.height - this.styles.xAxisSize)).toString())
+		}
 
 		this.guideLine.classList.add("active")
 		this.guideLine.setAttribute("x1", x.toString())
