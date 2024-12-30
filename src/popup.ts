@@ -1,4 +1,4 @@
-import { h3, p } from "./html"
+import { h3, p, span } from "./html"
 import { Label } from "./label"
 import { Point } from "./svgraph"
 
@@ -30,7 +30,11 @@ export default class PopupElement extends HTMLDivElement {
 
 	setValues(points: { name: string, point: Point }[]) {
 		for (const { name, point: { value } } of points) {
-			if (value != undefined) this.appendChild(p({}, new Text(`${name}: ${value}`)))
+			if (value != undefined) this.appendChild(p({},
+				span({ class: "name" }, new Text(name)),
+				new Text(": "),
+				span({ class: "value" }, new Text(value.toString())),
+			))
 		}
 	}
 

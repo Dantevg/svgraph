@@ -14,6 +14,7 @@ type DefaultAttrs = {
 
 export const div = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("div", attrs, children)
 export const p = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("p", attrs, children)
+export const span = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("span", attrs, children)
 export const h1 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h1", attrs, children)
 export const h2 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h2", attrs, children)
 export const h3 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h3", attrs, children)

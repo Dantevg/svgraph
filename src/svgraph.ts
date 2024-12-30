@@ -69,6 +69,11 @@ export default class SVGraph extends HTMLElement {
 			.popup p {
 				margin: 0.5em 0 0 0;
 			}
+			.popup .name {
+				font-family: monospace;
+				font-size: 1.2em;
+				font-weight: bold;
+			}
 			
 			.popup:not(.active) {
 				display: none;
