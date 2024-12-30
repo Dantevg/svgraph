@@ -16,15 +16,16 @@ function datesBetween(from: Date, to: Date, inclusive: boolean): Date[] {
 function getDatasetForPlayer(data: StatData, dates: string[], player: string, stat: string): { label: Label, value: number }[] {
 	const linedata = data.filter(row => row.Player == player)
 		.map(row => ({
-			label: new Date(row.Date).toISOString().split("T")[0],
+			label: new DateLabel(new Date(row.Date)),
 			value: Number(row[stat]),
 		}))
 		.flatMap((row, i, rows) => {
-			const days = datesBetween(new Date(row.label), new Date(rows[i + 1]?.label ?? dates.at(-1)), i == rows.length - 1)
-			// return days.map(day => ({ label: day.toISOString().split("T")[0], value: row.value }))
-			return days.map(day => ({ label: new DateLabel(day), value: row.value }))
-			// return days.map(day => ({ label: new NumberLabel(Math.floor(day.valueOf() / 1000 / 60 / 60 / 24)), value: row.value }))
+			const dayBeforeNext = new Date(rows[i + 1]?.label?.value ?? dates.at(-1))
+			dayBeforeNext.setUTCDate(dayBeforeNext.getUTCDate() - 1)
+			if (dayBeforeNext.valueOf() == row.label.value.valueOf()) return [row]
+			else return [row, { label: new DateLabel(dayBeforeNext), value: row.value }]
 		})
+
 	// Add first 0
 	const dayBeforeFirst = linedata[0].label.value
 	dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 1)

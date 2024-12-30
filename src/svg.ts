@@ -18,6 +18,7 @@ type DefaultAttrs = {
 	fill?: string
 	stroke?: string
 	"stroke-width"?: stringable
+	style?: string
 }
 
 export const svg = (attrs: { width: string, height: string, viewBox?: string, preserveAspectRatio?: string, overflow?: string } & DefaultAttrs, ...children: Node[]) =>

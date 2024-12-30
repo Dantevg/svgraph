@@ -13,8 +13,7 @@
 		}
 		
 		#svg-container {
-			margin: 100px;
-			width: 70%;
+			margin: 100px 20%;
 			height: 600px;
 			background: #8881;
 		}
@@ -28,8 +27,14 @@
 		const svg = new SVGRaph({
 			data,
 			styles: {
-				yAxisSize: 90,
-				minSpacePerXLabel: 100,
+				yAxis: {
+					width: 90,
+					labelRotation: -45,
+				},
+				xAxis: {
+					labelSpacing: 100,
+					labelRotation: -45,
+				}
 			}
 		})
 		window.svg = svg

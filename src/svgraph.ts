@@ -16,10 +16,16 @@ export type Config = {
 }
 
 export type Styles = {
-	xAxisSize?: number
-	yAxisSize?: number
-	minSpacePerXLabel?: number
-	minSpacePerYLabel?: number
+	xAxis?: {
+		height?: number
+		labelSpacing?: number
+		labelRotation?: number
+	}
+	yAxis?: {
+		width?: number
+		labelSpacing?: number
+		labelRotation?: number
+	}
 }
 
 export default class SVGraph extends HTMLElement {
@@ -39,10 +45,10 @@ export default class SVGraph extends HTMLElement {
 	private resizeObserver: ResizeObserver
 
 	private getXLabelInterval = (width: number): number =>
-		Math.ceil(this.xLabels.length / (width / this.styles.minSpacePerXLabel))
+		Math.ceil(this.xLabels.length / (width / this.styles.xAxis.labelSpacing))
 
 	private getYLabelInterval = (height: number): number =>
-		Math.ceil(this.yLabels.length / (height / this.styles.minSpacePerYLabel))
+		Math.ceil(this.yLabels.length / (height / this.styles.yAxis.labelSpacing))
 
 	private getXLabels = (width: number): Label[] => this.xLabels.filter((_, i) => i % this.getXLabelInterval(width) == 0)
 	private getYLabels = (height: number): Label[] => this.yLabels.filter((_, i) => i % this.getYLabelInterval(height) == 0)
@@ -91,6 +97,10 @@ export default class SVGraph extends HTMLElement {
 			.guideline:not(.active) ~ .guide-point {
 				display: none;
 			}
+				
+			.xaxis text, .yaxis text {
+				transform-box: fill-box;
+			}
 		`
 		shadow.appendChild(styleElem)
 
@@ -127,10 +137,16 @@ export default class SVGraph extends HTMLElement {
 		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
 
 		this.styles = {
-			xAxisSize: style?.xAxisSize ?? 30,
-			yAxisSize: style?.yAxisSize ?? 30,
-			minSpacePerXLabel: style?.minSpacePerXLabel ?? 50,
-			minSpacePerYLabel: style?.minSpacePerYLabel ?? 50,
+			xAxis: {
+				height: style?.xAxis?.height ?? 30,
+				labelSpacing: style?.xAxis?.labelSpacing ?? 50,
+				labelRotation: style?.xAxis?.labelRotation ?? 0,
+			},
+			yAxis: {
+				width: style?.yAxis?.width ?? 30,
+				labelSpacing: style?.yAxis?.labelSpacing ?? 50,
+				labelRotation: style?.yAxis?.labelRotation ?? 0,
+			},
 		}
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
@@ -139,22 +155,16 @@ export default class SVGraph extends HTMLElement {
 	draw(width: number, height: number) {
 		this.svgElem.innerHTML = ""
 
-		this.svgElem.appendChild(this.grid(this.styles.yAxisSize, 0, width - this.styles.yAxisSize, height - this.styles.xAxisSize))
+		this.svgElem.appendChild(this.grid(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
 		this.svgElem.appendChild(this.guideLine)
-		this.guideLine.setAttribute("y2", (height - this.styles.xAxisSize).toString())
+		this.guideLine.setAttribute("y2", (height - this.styles.xAxis.height).toString())
 		this.svgElem.appendChild(this.axes(0, 0, width, height))
-		this.svgElem.appendChild(this.lines(this.styles.yAxisSize, 0, width - this.styles.yAxisSize, height - this.styles.xAxisSize))
+		this.svgElem.appendChild(this.lines(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
 
-		this.guidePoints = this.data.map(line => circle({
-			class: "guide-point",
-			cx: line.points[0].label.getPos(...this.xRange) + this.styles.yAxisSize,
-			cy: (1 - line.points[0].value / this.maxY) * (height - this.styles.xAxisSize),
-			r: 2,
-			fill: "white"
-		}))
+		this.guidePoints = this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: 2, fill: "white" }))
 		this.svgElem.append(...this.guidePoints)
 
-		const area = rect({ x: this.styles.yAxisSize, y: 0, width: width - this.styles.yAxisSize, height: height - this.styles.xAxisSize, fill: "transparent" })
+		const area = rect({ x: this.styles.yAxis.width, y: 0, width: width - this.styles.yAxis.width, height: height - this.styles.xAxis.height, fill: "transparent" })
 		this.svgElem.appendChild(area)
 		area.addEventListener("mousemove", (event: MouseEvent) => this.onMouseMove(event))
 		area.addEventListener("mouseleave", (event: MouseEvent) => this.onMouseLeave(event))
@@ -162,8 +172,8 @@ export default class SVGraph extends HTMLElement {
 
 	private axes(x: number, y: number, width: number, height: number): SVGElement {
 		return g({ class: "axes", transform: `translate(${x}, ${y})` },
-			this.xAxis(this.styles.yAxisSize, height - this.styles.xAxisSize, width - this.styles.yAxisSize, this.styles.xAxisSize),
-			this.yAxis(0, 0, this.styles.yAxisSize, height - this.styles.xAxisSize)
+			this.xAxis(this.styles.yAxis.width, height - this.styles.xAxis.height, width - this.styles.yAxis.width, this.styles.xAxis.height),
+			this.yAxis(0, 0, this.styles.yAxis.width, height - this.styles.xAxis.height)
 		)
 	}
 
@@ -173,7 +183,9 @@ export default class SVGraph extends HTMLElement {
 			...this.getXLabels(width).map(step => text({
 				x: x + step.getPos(...this.xRange) * width,
 				y: y + 20,
-				"text-anchor": "middle"
+				transform: `rotate(${this.styles.xAxis.labelRotation})`,
+				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labelRotation),
+				style: `transform-origin: ${transformOriginForLabelRotation(this.styles.xAxis.labelRotation)}`,
 			}, new Text(step.text)))
 		)
 
@@ -183,7 +195,9 @@ export default class SVGraph extends HTMLElement {
 			...this.getYLabels(height).map(step => text({
 				x: x + width - 10,
 				y: y + (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height + 5,
-				"text-anchor": "end"
+				transform: `rotate(${this.styles.yAxis.labelRotation})`,
+				"text-anchor": "end",
+				style: "transform-origin: right",
 			}, new Text(step.text)))
 		)
 
@@ -218,14 +232,14 @@ export default class SVGraph extends HTMLElement {
 
 		const points = this.popupElem.update(
 			event.clientX, event.clientY,
-			(x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize),
+			(x - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width),
 			this.xRange,
 			this.data
 		)
 
 		for (let i = 0; i < points.length; i++) {
-			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xRange) * (rect.width - this.styles.yAxisSize) + this.styles.yAxisSize).toString())
-			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.maxY) * (rect.height - this.styles.xAxisSize)).toString())
+			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xRange) * (rect.width - this.styles.yAxis.width) + this.styles.yAxis.width).toString())
+			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.maxY) * (rect.height - this.styles.xAxis.height)).toString())
 		}
 
 		this.guideLine.classList.add("active")
@@ -240,6 +254,12 @@ export default class SVGraph extends HTMLElement {
 }
 
 customElements.define("svg-graph", SVGraph)
+
+const textAnchorForLabelRotation = (rotation: number): "start" | "middle" | "end" =>
+	rotation < 0 ? "end" : rotation > 0 ? "start" : "middle"
+
+const transformOriginForLabelRotation = (rotation: number): "left" | "center" | "right" =>
+	rotation < 0 ? "right" : rotation > 0 ? "left" : "center"
 
 declare global {
 	interface Array<T> {
