@@ -30,7 +30,7 @@ export default class SVGraph extends HTMLElement {
 	yLabels: Label[]
 	styles: Styles
 
-	xRange: [number, number]
+	xRange: [Label, Label]
 	maxY: number
 	private resizeObserver: ResizeObserver
 
@@ -95,15 +95,14 @@ export default class SVGraph extends HTMLElement {
 	update({ data, xLabels, yLabels, styles: style }: Config, redraw = true) {
 		this.data = Object.entries(data).sort((a, b) => b[1].at(-1).value - a[1].at(-1).value).map(([name, points]) => ({ name, points }))
 
-		// this.maxX = this.data.map(({ points }) => points.length - 1).max()
 		this.xRange = [
-			Number(this.data.map(({ points }) => points[0])[0].label.text),
-			Number(this.data.map(({ points }) => points.at(-1)).at(-1).label.text)
+			this.data.map(({ points }) => points[0])[0].label,
+			this.data.map(({ points }) => points.at(-1)).at(-1).label,
 		]
 		this.maxY = this.data[0].points.maxByKey("value").value
 
-		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ points }) => points.keys().toArray()))
-			.values().toArray().sort((a, b) => a - b).map((i) => new NumberLabel(i))
+		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ points }) => points.map(x => x.label)))
+			.values().toArray().sort((a, b) => a.getPos(...this.xRange) - b.getPos(...this.xRange))
 		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
 
 		this.styles = {
@@ -153,7 +152,7 @@ export default class SVGraph extends HTMLElement {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
 			...this.getYLabels(height).map(step => text({
 				x: x + width - 10,
-				y: y + (1 - step.getPos(0, this.maxY)) * height + 5,
+				y: y + (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height + 5,
 				"text-anchor": "end"
 			}, new Text(step.text)))
 		)
@@ -166,8 +165,8 @@ export default class SVGraph extends HTMLElement {
 				stroke: "#FFF4"
 			})),
 			...this.getYLabels(height).map(step => line({
-				from: [0, (1 - step.getPos(0, this.maxY)) * height],
-				to: [width, (1 - step.getPos(0, this.maxY)) * height],
+				from: [0, (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height],
+				to: [width, (1 - step.getPos(new NumberLabel(0), new NumberLabel(this.maxY))) * height],
 				stroke: "#FFF4"
 			})),
 		)

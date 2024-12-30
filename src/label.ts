@@ -1,6 +1,6 @@
 export interface Label {
 	get text(): string
-	getPos(min: number, max: number): number
+	getPos(min: Label, max: Label): number
 }
 
 export class NumberLabel implements Label {
@@ -8,7 +8,7 @@ export class NumberLabel implements Label {
 
 	get text() { return this.value.toString() }
 
-	getPos(min: number, max: number) { return (this.value - min) / (max - min) }
+	getPos(min: NumberLabel, max: NumberLabel) { return (this.value - min.value) / (max.value - min.value) }
 }
 
 // TODO: date labels etc
