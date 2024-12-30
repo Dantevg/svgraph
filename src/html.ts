@@ -8,8 +8,9 @@ function element(name: string, attrs: { [key: string]: any }, children: Node[] =
 }
 
 type DefaultAttrs = {
-	id?: string,
+	id?: string
 	class?: string
+	style?: string
 }
 
 export const div = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("div", attrs, children)

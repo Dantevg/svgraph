@@ -29,7 +29,7 @@ export default class SVGraph extends HTMLElement {
 
 	guidePoints: SVGCircleElement[]
 
-	data: { name: string, points: Point[] }[]
+	data: { name: string, colour: string, points: Point[] }[]
 	xLabels: Label[]
 	yLabels: Label[]
 	styles: Styles
@@ -64,10 +64,17 @@ export default class SVGraph extends HTMLElement {
 				backdrop-filter: blur(20px);
 			}
 			.popup h3 {
-				margin: 0 0 0.8em 0;
+				margin: 0 0 0.6em 0;
 			}
 			.popup p {
-				margin: 0.5em 0 0 0;
+				margin: 0.3em 0 0 0;
+			}
+			.popup .swatch {
+				display: inline-block;
+				width: 0.6em;
+				height: 0.6em;
+				margin-right: 0.5em;
+				border-radius: 50%;
 			}
 			.popup .name {
 				font-family: monospace;
@@ -105,7 +112,9 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	update({ data, xLabels, yLabels, styles: style }: Config, redraw = true) {
-		this.data = Object.entries(data).sort((a, b) => b[1].at(-1).value - a[1].at(-1).value).map(([name, points]) => ({ name, points }))
+		this.data = Object.entries(data)
+			.sort((a, b) => b[1].at(-1).value - a[1].at(-1).value)
+			.map(([name, points], i, arr) => ({ name, points, colour: turbo[Math.floor((i + 1) / (arr.length + 1) * turbo.length)] }))
 
 		this.xRange = [
 			this.data.map(({ points }) => points[0])[0].label,
@@ -135,7 +144,7 @@ export default class SVGraph extends HTMLElement {
 		this.guideLine.setAttribute("y2", (height - this.styles.xAxisSize).toString())
 		this.svgElem.appendChild(this.axes(0, 0, width, height))
 		this.svgElem.appendChild(this.lines(this.styles.yAxisSize, 0, width - this.styles.yAxisSize, height - this.styles.xAxisSize))
-		
+
 		this.guidePoints = this.data.map(line => circle({
 			class: "guide-point",
 			cx: line.points[0].label.getPos(...this.xRange) + this.styles.yAxisSize,
@@ -194,8 +203,7 @@ export default class SVGraph extends HTMLElement {
 
 	private lines = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" },
-			...this.data.map(({ name, points: values }, i) => {
-				const colour = turbo[Math.floor((i + 1) / (this.data.length + 1) * turbo.length)]
+			...this.data.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
 					point.label.getPos(...this.xRange) * width,
 					(1 - point.value / this.maxY) * height
@@ -214,7 +222,7 @@ export default class SVGraph extends HTMLElement {
 			this.xRange,
 			this.data
 		)
-		
+
 		for (let i = 0; i < points.length; i++) {
 			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xRange) * (rect.width - this.styles.yAxisSize) + this.styles.yAxisSize).toString())
 			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.maxY) * (rect.height - this.styles.xAxisSize)).toString())

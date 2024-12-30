@@ -1,4 +1,4 @@
-import { h3, p, span } from "./html"
+import { div, h3, p, span } from "./html"
 import { Label } from "./label"
 import { Point } from "./svgraph"
 
@@ -28,9 +28,10 @@ export default class PopupElement extends HTMLDivElement {
 		this.style.top = `${y}px`
 	}
 
-	setValues(points: { name: string, point: Point }[]) {
-		for (const { name, point: { value } } of points) {
+	setValues(points: { name: string, colour: string, point: Point }[]) {
+		for (const { name, colour, point: { value } } of points) {
 			if (value != undefined) this.appendChild(p({},
+				div({ class: "swatch", style: `background-color: ${colour}` }),
 				span({ class: "name" }, new Text(name)),
 				new Text(": "),
 				span({ class: "value" }, new Text(value.toString())),
@@ -38,7 +39,7 @@ export default class PopupElement extends HTMLDivElement {
 		}
 	}
 
-	update(x: number, y: number, t: number, range: [Label, Label], data: { name: string, points: Point[] }[]): Point[] {
+	update(x: number, y: number, t: number, range: [Label, Label], data: { name: string, colour: string, points: Point[] }[]): Point[] {
 		this.move(x, y)
 
 		const label = nearestLabel(t, range, data)
@@ -46,7 +47,7 @@ export default class PopupElement extends HTMLDivElement {
 		this.innerHTML = ""
 		this.appendChild(h3({}, new Text(label.text)))
 
-		const nearestPoints = data.map(({ name, points }) => ({ name, point: nearestPointForLabel(points, label, range) }))
+		const nearestPoints = data.map(({ name, colour, points }) => ({ name, colour, point: nearestPointForLabel(points, label, range) }))
 		this.setValues(nearestPoints)
 
 		this.show()

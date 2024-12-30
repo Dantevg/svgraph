@@ -12,9 +12,9 @@ function element(name: string, attrs: { [key: string]: any }, children: Node[] =
 type stringable = string | number | boolean
 
 type DefaultAttrs = {
-	id?: string,
+	id?: string
 	class?: string
-	transform?: string,
+	transform?: string
 	fill?: string
 	stroke?: string
 	"stroke-width"?: stringable
