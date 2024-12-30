@@ -1,13 +1,13 @@
 import { turbo } from "./colourschemes"
-import { div } from "./html"
 import { Label, NumberLabel } from "./label"
 import PopupElement from "./popup"
 import { g, line, polyline, rect, svg, text } from "./svg"
 
 export { Label, NumberLabel } from "./label"
+export { getData } from "./data"
 
 export type Config = {
-	data: { [category: string]: number[] }
+	data: { [category: string]: { label: Label, value: number }[] }
 	xLabels?: Label[]
 	yLabels?: Label[]
 	styles?: Styles
@@ -25,12 +25,12 @@ export default class SVGraph extends HTMLElement {
 	popupElem: PopupElement
 	guideLine: SVGElement
 
-	data: { name: string, values: number[] }[]
+	data: { name: string, points: { label: Label, value: number }[] }[]
 	xLabels: Label[]
 	yLabels: Label[]
 	styles: Styles
 
-	maxX: number
+	xRange: [number, number]
 	maxY: number
 	private resizeObserver: ResizeObserver
 
@@ -93,12 +93,16 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	update({ data, xLabels, yLabels, styles: style }: Config, redraw = true) {
-		this.data = Object.entries(data).sort((a, b) => b[1].max() - a[1].max()).map(([name, values]) => ({ name, values }))
+		this.data = Object.entries(data).sort((a, b) => b[1].at(-1).value - a[1].at(-1).value).map(([name, points]) => ({ name, points }))
 
-		this.maxX = this.data.map(({ values }) => values.length - 1).max()
-		this.maxY = this.data[0].values.max()
+		// this.maxX = this.data.map(({ points }) => points.length - 1).max()
+		this.xRange = [
+			Number(this.data.map(({ points }) => points[0])[0].label.text),
+			Number(this.data.map(({ points }) => points.at(-1)).at(-1).label.text)
+		]
+		this.maxY = this.data[0].points.maxByKey("value").value
 
-		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ values }) => values.keys().toArray()))
+		this.xLabels = xLabels ?? new Set(this.data.flatMap(({ points }) => points.keys().toArray()))
 			.values().toArray().sort((a, b) => a - b).map((i) => new NumberLabel(i))
 		this.yLabels = yLabels ?? [new NumberLabel(0), new NumberLabel(this.maxY)]
 
@@ -138,7 +142,7 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "xaxis" },
 			line({ from: [x, y], to: [x + width, y], stroke: "white" }),
 			...this.getXLabels(width).map(step => text({
-				x: x + step.getPos(this.maxX) * width,
+				x: x + step.getPos(...this.xRange) * width,
 				y: y + 20,
 				"text-anchor": "middle"
 			}, new Text(step.text)))
@@ -149,7 +153,7 @@ export default class SVGraph extends HTMLElement {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
 			...this.getYLabels(height).map(step => text({
 				x: x + width - 10,
-				y: y + (1 - step.getPos(this.maxY)) * height + 5,
+				y: y + (1 - step.getPos(0, this.maxY)) * height + 5,
 				"text-anchor": "end"
 			}, new Text(step.text)))
 		)
@@ -157,22 +161,25 @@ export default class SVGraph extends HTMLElement {
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
 			...this.getXLabels(width).map(step => line({
-				from: [step.getPos(this.maxX) * width, 0],
-				to: [step.getPos(this.maxX) * width, height],
+				from: [step.getPos(...this.xRange) * width, 0],
+				to: [step.getPos(...this.xRange) * width, height],
 				stroke: "#FFF4"
 			})),
 			...this.getYLabels(height).map(step => line({
-				from: [0, (1 - step.getPos(this.maxY)) * height],
-				to: [width, (1 - step.getPos(this.maxY)) * height],
+				from: [0, (1 - step.getPos(0, this.maxY)) * height],
+				to: [width, (1 - step.getPos(0, this.maxY)) * height],
 				stroke: "#FFF4"
 			})),
 		)
 
 	private lines = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" },
-			...this.data.map(({ values }, i) => {
+			...this.data.map(({ name, points: values }, i) => {
 				const colour = turbo[Math.floor((i + 1) / (this.data.length + 1) * turbo.length)]
-				const points = values.map((y, x) => [x * width / this.maxX, (1 - y / this.maxY) * height] as [number, number])
+				const points = values.map(point => [
+					point.label.getPos(...this.xRange) * width,
+					(1 - point.value / this.maxY) * height
+				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
 		)
@@ -180,8 +187,8 @@ export default class SVGraph extends HTMLElement {
 	private onMouseMove(event: MouseEvent) {
 		const rect = this.getBoundingClientRect()
 		const x = event.clientX - rect.left
-		
-		this.popupElem.update(event.clientX, event.clientY, Math.round((x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize) * this.maxX), this.data)
+
+		this.popupElem.update(event.clientX, event.clientY, (x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize), this.data)
 
 		this.guideLine.classList.add("active")
 		this.guideLine.setAttribute("x1", x.toString())
@@ -198,10 +205,19 @@ customElements.define("svg-graph", SVGraph)
 
 declare global {
 	interface Array<T> {
-		max(): number
-		min(): number
+		max(): T
+		maxBy(fn: (x: T) => number): T
+		maxByKey(key: string): T
+		min(): T
+		minBy(fn: (x: T) => number): T
+		minByKey(key: string): T
 	}
 }
 
 Array.prototype.max = function () { return this.reduce((a, b) => Math.max(a, b), 0) }
+Array.prototype.maxBy = function <T>(fn: (x: T) => number) { return this.reduce((a, b) => fn(a) > fn(b) ? a : b) }
+Array.prototype.maxByKey = function (key: string) { return this.reduce((a, b) => a[key] > b[key] ? a : b) }
+
 Array.prototype.min = function () { return this.reduce((a, b) => Math.min(a, b), 0) }
+Array.prototype.minBy = function <T>(fn: (x: T) => number) { return this.reduce((a, b) => fn(a) < fn(b) ? a : b) }
+Array.prototype.minByKey = function (key: string) { return this.reduce((a, b) => a[key] < b[key] ? a : b) }

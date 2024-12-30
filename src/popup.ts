@@ -1,4 +1,5 @@
-import { h1, h2, h3, p } from "./html"
+import { h3, p } from "./html"
+import { Label } from "./label"
 
 export default class PopupElement extends HTMLDivElement {
 	constructor() {
@@ -20,12 +21,14 @@ export default class PopupElement extends HTMLDivElement {
 		}
 	}
 
-	update(x: number, y: number, idx: number, data: { name: string, values: number[] }[]) {
+	update(x: number, y: number, idx: number, data: { name: string, points: { label: Label, value: number }[] }[]) {
 		this.move(x, y)
 
 		this.innerHTML = ""
 		this.appendChild(h3({}, new Text(idx.toString())))
-		this.setValues(data.map(line => ({ name: line.name, value: line.values[idx] })))
+		// this.setValues(data.map(line => ({ name: line.name, value: line.values[idx] })))
+		
+		// TODO: get closest x label and get values from lines
 
 		this.show()
 	}
