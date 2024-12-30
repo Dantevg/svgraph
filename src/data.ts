@@ -24,6 +24,11 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 			// return days.map(day => ({ label: day.toISOString().split("T")[0], value: row.value }))
 			return days.map(day => ({ label: new NumberLabel(Math.floor(day.valueOf() / 1000 / 60 / 60 / 24)), value: row.value }))
 		})
+	// Add first 0 for everyone
+	linedata.unshift({
+		label: new NumberLabel(Math.floor(new Date(dates[0]).valueOf() / 1000 / 60 / 60 / 24)),
+		value: 0,
+	})
 	return linedata
 }
 

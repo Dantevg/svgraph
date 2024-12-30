@@ -187,7 +187,12 @@ export default class SVGraph extends HTMLElement {
 		const rect = this.getBoundingClientRect()
 		const x = event.clientX - rect.left
 
-		this.popupElem.update(event.clientX, event.clientY, (x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize), this.data)
+		this.popupElem.update(
+			event.clientX, event.clientY,
+			(x - this.styles.yAxisSize) / (rect.width - this.styles.yAxisSize),
+			this.xRange,
+			this.data
+		)
 
 		this.guideLine.classList.add("active")
 		this.guideLine.setAttribute("x1", x.toString())
