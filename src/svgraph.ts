@@ -1,4 +1,5 @@
-import { Label } from "./label"
+import { Axis, DateAxis, NumberAxis } from "./axis"
+import { DateLabel, Label, NumberLabel } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
 
@@ -12,8 +13,6 @@ export type Point = { label: Label, value: Label }
 
 export type Config = {
 	data: { [category: string]: Point[] }
-	xLabels?: Label[]
-	yLabels?: Label[]
 	styles?: Partial<Styles>
 }
 
@@ -57,19 +56,10 @@ export default class SVGraph extends HTMLElement {
 
 	data: { name: string, colour: string, points: Point[] }[]
 	styles: Styles
-	xaxis: AxisData
-	yaxis: AxisData
+	xaxis: Axis<Label>
+	yaxis: Axis<Label>
 
 	private resizeObserver: ResizeObserver
-
-	private getXLabelInterval = (width: number): number =>
-		Math.ceil(this.xaxis.labels.length / (width / this.styles.xAxis.labelSpacing))
-
-	private getYLabelInterval = (height: number): number =>
-		Math.ceil(this.yaxis.labels.length / (height / this.styles.yAxis.labelSpacing))
-
-	private getXLabels = (width: number): Label[] => this.xaxis.labels.filter((_, i) => i % this.getXLabelInterval(width) == 0)
-	private getYLabels = (height: number): Label[] => this.yaxis.labels.filter((_, i) => i % this.getYLabelInterval(height) == 0)
 
 	constructor(config: Config) {
 		super()
@@ -95,12 +85,12 @@ export default class SVGraph extends HTMLElement {
 		this.update(config, false)
 	}
 
-	update({ data, xLabels, yLabels, styles }: Config, redraw = true) {
+	update({ data, styles }: Config, redraw = true) {
 		this.styles = {
 			colourscheme: styles?.colourscheme ?? ["black"],
 			xAxis: {
 				height: styles?.xAxis?.height ?? 30,
-				labelSpacing: styles?.xAxis?.labelSpacing ?? 50,
+				labelSpacing: styles?.xAxis?.labelSpacing ?? 30,
 				labelRotation: styles?.xAxis?.labelRotation ?? 0,
 			},
 			yAxis: {
@@ -128,8 +118,8 @@ export default class SVGraph extends HTMLElement {
 			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
 			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
 
-		this.xaxis = getAxisData(this.data, "label", xLabels)
-		this.yaxis = getAxisData(this.data, "value", yLabels)
+		this.xaxis = getAxis(this.data, "label")
+		this.yaxis = getAxis(this.data, "value")
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
 	}
@@ -160,7 +150,7 @@ export default class SVGraph extends HTMLElement {
 	private xAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "xaxis" },
 			line({ from: [x, y], to: [x + width, y], stroke: "white" }),
-			...this.getXLabels(width).map(step => text({
+			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => text({
 				x: x + step.getPos(...this.xaxis.range) * width,
 				y: y + 20,
 				transform: `rotate(${this.styles.xAxis.labelRotation})`,
@@ -172,7 +162,7 @@ export default class SVGraph extends HTMLElement {
 	private yAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "yaxis" },
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
-			...this.getYLabels(height).map(step => text({
+			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => text({
 				x: x + width - 10,
 				y: y + (1 - step.getPos(...this.yaxis.range)) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labelRotation})`,
@@ -183,12 +173,12 @@ export default class SVGraph extends HTMLElement {
 
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
-			...this.getXLabels(width).map(step => line({
+			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => line({
 				from: [step.getPos(...this.xaxis.range) * width, 0],
 				to: [step.getPos(...this.xaxis.range) * width, height],
 				stroke: this.styles.grid.stroke
 			})),
-			...this.getYLabels(height).map(step => line({
+			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => line({
 				from: [0, (1 - step.getPos(...this.yaxis.range)) * height],
 				to: [width, (1 - step.getPos(...this.yaxis.range)) * height],
 				stroke: this.styles.grid.stroke
@@ -247,16 +237,13 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
-function getAxisData(data: { name: string, colour: string, points: Point[] }[], key: string, labels_?: Label[]): AxisData {
+function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: string): Axis<L> {
 	const range: [Label, Label] = [
 		data.map(({ points }) => points.minBy(p => p[key].number)[key]).minByKey("number"),
 		data.map(({ points }) => points.maxBy(p => p[key].number)[key]).maxByKey("number"),
 	]
 
-	const labels = labels_ ?? new Set(data.flatMap(({ points }) => points.map(x => x[key])))
-		.values().toArray().sort((a, b) => a.getPos(...range) - b.getPos(...range))
-
-	return { range, labels }
+	return new range[0].axisType(range)
 }
 
 const style = `

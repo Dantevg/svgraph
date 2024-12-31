@@ -30,7 +30,7 @@ export default class PopupElement extends HTMLDivElement {
 
 	setValues(points: { name: string, colour: string, point: Point }[]) {
 		for (const { name, colour, point: { value } } of points) {
-			if (value != undefined) this.appendChild(p({},
+			if (value != undefined && value.number != 0) this.appendChild(p({},
 				div({ class: "swatch", style: `background-color: ${colour}` }),
 				span({ class: "name" }, new Text(name)),
 				new Text(": "),

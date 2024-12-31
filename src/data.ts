@@ -17,7 +17,7 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 	const linedata = data.filter(row => row.Player == player)
 		.map(row => ({
 			label: new DateLabel(new Date(row.Date)),
-			value: new TimeLabel(Number(row[stat]), 0.05),
+			value: new TimeLabel(Number(row[stat]) / 20),
 		}))
 		.flatMap((row, i, rows) => {
 			const dayBeforeNext = new Date(rows[i + 1]?.label?.value ?? dates.at(-1))
@@ -31,7 +31,7 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 	dayBeforeFirst.setDate(dayBeforeFirst.getDate() - 2)
 	linedata.unshift({
 		label: new DateLabel(dayBeforeFirst),
-		value: new TimeLabel(0, 1),
+		value: new TimeLabel(0),
 	})
 	return linedata
 }

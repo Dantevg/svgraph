@@ -1,7 +1,10 @@
+import { Axis, DateAxis, MetricAxis, NumberAxis, TimeAxis } from "./axis"
+
 export interface Label {
 	get text(): string
 	get number(): number
-	getPos(min: Label, max: Label): number
+	get axisType(): any
+	getPos(min: this, max: this): number
 }
 
 /**
@@ -14,8 +17,9 @@ export class NumberLabel implements Label {
 
 	get text() { return this.value.toString() }
 	get number() { return this.value }
+	get axisType() { return NumberAxis }
 
-	getPos = (min: NumberLabel, max: NumberLabel) => unlerp(this.value, min.value, max.value)
+	getPos = (min: NumberLabel, max: NumberLabel) => unlerp(this.number, min.number, max.number)
 }
 
 export class DateLabel implements Label {
@@ -23,22 +27,23 @@ export class DateLabel implements Label {
 
 	get text() { return this.value.toISOString().split("T")[0] }
 	get number() { return this.value.valueOf() }
+	get axisType() { return DateAxis }
 
-	getPos = (min: DateLabel, max: DateLabel) => unlerp(this.value.valueOf(), min.value.valueOf(), max.value.valueOf())
+	getPos = (min: DateLabel, max: DateLabel) => unlerp(this.number, min.number, max.number)
 }
 
 export class TimeLabel implements Label {
-	constructor(public value: number, public offset: number) { }
+	constructor(public value: number) { }
 
 	get text() {
-		const inSeconds = this.value * this.offset
-		const date = new Date(inSeconds * 1000)
-		const d = Math.floor(inSeconds / 24 / 60 / 60)
+		const date = new Date(this.value * 1000)
+		const d = Math.floor(this.value / 24 / 60 / 60)
 		const h = date.getUTCHours()
 		const m = date.getUTCMinutes()
 		const s = date.getUTCSeconds() + date.getUTCMilliseconds() / 1000
 		if (h > 0 || d > 0) {
-			return `${h + d * 24}:${String(m).padStart(2, "0")} h`
+			if (m == 0) return `${h + d * 24} h`
+			else return `${h + d * 24}:${String(m).padStart(2, "0")} h`
 		} else if (m > 0) {
 			return `${m}:${String(Math.floor(s)).padStart(2, "0")}`
 		} else {
@@ -46,21 +51,22 @@ export class TimeLabel implements Label {
 		}
 	}
 	get number() { return this.value }
+	get axisType() { return TimeAxis }
 
-	getPos = (min: TimeLabel, max: TimeLabel) => unlerp(this.value, min.value, max.value)
+	getPos = (min: TimeLabel, max: TimeLabel) => unlerp(this.number, min.number, max.number)
 }
 
 export class MetricLabel implements Label {
-	constructor(public value: number, public offset: number, public unit: string) { }
+	constructor(public value: number, public unit: string) { }
 
 	get text() {
-		const value = this.value * this.offset
-		const offset = MetricLabel.largestOffset(value)
-		return `${Math.floor(value / Math.pow(10, offset * 3))} ${MetricLabel.units[offset + MetricLabel.unitsStartOffset]}${this.unit}`
+		const offset = MetricLabel.largestOffset(this.value)
+		return `${Math.floor(this.value / Math.pow(10, offset * 3))} ${MetricLabel.units[offset + MetricLabel.unitsStartOffset]}${this.unit}`
 	}
 	get number() { return this.value }
+	get axisType() { return MetricAxis }
 
-	getPos = (min: MetricLabel, max: MetricLabel) => unlerp(this.value, min.value, max.value)
+	getPos = (min: MetricLabel, max: MetricLabel) => unlerp(this.number, min.number, max.number)
 
 	static units = ["n", "u", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y"]
 	static unitsStartOffset = 3
