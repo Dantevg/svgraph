@@ -20,13 +20,14 @@
 	</style>
 
 	<script type="module">
-		import { default as SVGRaph, getData } from "../out/svgraph.js"
+		import { default as SVGRaph, getData, rainbow } from "../out/svgraph.js"
 
 		const data = await getData("Active Play Time")
 
 		const svg = new SVGRaph({
 			data,
 			styles: {
+				colourscheme: rainbow,
 				yAxis: {
 					width: 90,
 					labelRotation: -45,

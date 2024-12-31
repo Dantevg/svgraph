@@ -1,10 +1,12 @@
-import { turbo } from "./colourschemes"
 import { Label } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
 
 export { Label, NumberLabel, DateLabel, MetricLabel } from "./label"
+
+// TODO: remove these re-exports in release, only for testing
 export { getData } from "./data"
+export * from "./colourschemes"
 
 export type Point = { label: Label, value: Label }
 
@@ -16,6 +18,7 @@ export type Config = {
 }
 
 export type Styles = {
+	colourscheme: string[]
 	xAxis: {
 		height: number
 		labelSpacing: number
@@ -80,8 +83,6 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
 		shadow.appendChild(this.svgElem)
 
-		this.guideElem = line({ class: "guideline", from: [0, 0], to: [0, 0] })
-
 		this.popupElem = new PopupElement()
 		this.popupElem.classList.add("popup")
 		shadow.appendChild(this.popupElem)
@@ -95,27 +96,8 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	update({ data, xLabels, yLabels, styles }: Config, redraw = true) {
-		this.data = Object.entries(data)
-			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
-			.map(([name, points], i, arr) => ({ name, points, colour: turbo[Math.floor((i + 1) / (arr.length + 1) * turbo.length)] }))
-
-		// TODO: do not assume the biggest value is at the end
-		const xRange: [Label, Label] = [
-			this.data[0].points[0].label,
-			this.data.at(-1).points.at(-1).label,
-		]
-		const xLabels_ = xLabels ?? new Set(this.data.flatMap(({ points }) => points.map(x => x.label)))
-			.values().toArray().sort((a, b) => a.getPos(...xRange) - b.getPos(...xRange))
-		this.xaxis = { range: xRange, labels: xLabels_ }
-
-		const yRange: [Label, Label] = [
-			this.data.at(-1).points[0].value,
-			this.data[0].points.at(-1).value,
-		]
-		const yLabels_ = yLabels ?? [yRange[0], yRange[1]]
-		this.yaxis = { range: yRange, labels: yLabels_ }
-
 		this.styles = {
+			colourscheme: styles?.colourscheme ?? ["black"],
 			xAxis: {
 				height: styles?.xAxis?.height ?? 30,
 				labelSpacing: styles?.xAxis?.labelSpacing ?? 50,
@@ -141,6 +123,13 @@ export default class SVGraph extends HTMLElement {
 				width: styles?.lines?.width ?? 2,
 			},
 		}
+
+		this.data = Object.entries(data)
+			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
+			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
+
+		this.xaxis = getAxisData(this.data, "label", xLabels)
+		this.yaxis = getAxisData(this.data, "value", yLabels)
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
 	}
@@ -255,6 +244,20 @@ const textAnchorForLabelRotation = (rotation: number): "start" | "middle" | "end
 
 const transformOriginForLabelRotation = (rotation: number): "left" | "center" | "right" =>
 	rotation < 0 ? "right" : rotation > 0 ? "left" : "center"
+
+const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
+
+function getAxisData(data: { name: string, colour: string, points: Point[] }[], key: string, labels_?: Label[]): AxisData {
+	const range: [Label, Label] = [
+		data.map(({ points }) => points.minBy(p => p[key].number)[key]).minByKey("number"),
+		data.map(({ points }) => points.maxBy(p => p[key].number)[key]).maxByKey("number"),
+	]
+
+	const labels = labels_ ?? new Set(data.flatMap(({ points }) => points.map(x => x[key])))
+		.values().toArray().sort((a, b) => a.getPos(...range) - b.getPos(...range))
+
+	return { range, labels }
+}
 
 const style = `
 .popup {
