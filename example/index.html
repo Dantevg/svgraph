@@ -11,7 +11,7 @@
 			background: #111;
 			color: #EEE;
 		}
-		
+
 		#svg-container {
 			margin: 100px 20%;
 			height: 600px;
@@ -20,8 +20,8 @@
 	</style>
 
 	<script type="module">
-		import { default as SVGRaph, NumberLabel, MetricLabel, getData } from "../out/svgraph.js"
-		
+		import { default as SVGRaph, getData } from "../out/svgraph.js"
+
 		const data = await getData("Active Play Time")
 
 		const svg = new SVGRaph({
@@ -38,7 +38,6 @@
 			}
 		})
 		window.svg = svg
-		window.MetricLabel = MetricLabel
 		document.querySelector("#svg-container").appendChild(svg)
 	</script>
 </head>

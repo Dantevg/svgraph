@@ -12,19 +12,33 @@ export type Config = {
 	data: { [category: string]: Point[] }
 	xLabels?: Label[]
 	yLabels?: Label[]
-	styles?: Styles
+	styles?: Partial<Styles>
 }
 
 export type Styles = {
-	xAxis?: {
-		height?: number
-		labelSpacing?: number
-		labelRotation?: number
+	xAxis: {
+		height: number
+		labelSpacing: number
+		labelRotation: number
 	}
-	yAxis?: {
-		width?: number
-		labelSpacing?: number
-		labelRotation?: number
+	yAxis: {
+		width: number
+		labelSpacing: number
+		labelRotation: number
+	}
+	grid: {
+		stroke: string
+	}
+	guideline: {
+		stroke: string
+		width: number
+		points: {
+			r: number
+			fill: string
+		}
+	}
+	lines: {
+		width: number
 	}
 }
 
@@ -110,7 +124,7 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
 		shadow.appendChild(this.svgElem)
 
-		this.guideLine = line({ class: "guideline", from: [0, 0], to: [0, 0], stroke: "#FFF8", "stroke-width": 1 })
+		this.guideLine = line({ class: "guideline", from: [0, 0], to: [0, 0] })
 
 		this.popupElem = new PopupElement()
 		this.popupElem.classList.add("popup")
@@ -124,7 +138,7 @@ export default class SVGraph extends HTMLElement {
 		this.update(config, false)
 	}
 
-	update({ data, xLabels, yLabels, styles: style }: Config, redraw = true) {
+	update({ data, xLabels, yLabels, styles }: Config, redraw = true) {
 		this.data = Object.entries(data)
 			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
 			.map(([name, points], i, arr) => ({ name, points, colour: turbo[Math.floor((i + 1) / (arr.length + 1) * turbo.length)] }))
@@ -147,14 +161,28 @@ export default class SVGraph extends HTMLElement {
 
 		this.styles = {
 			xAxis: {
-				height: style?.xAxis?.height ?? 30,
-				labelSpacing: style?.xAxis?.labelSpacing ?? 50,
-				labelRotation: style?.xAxis?.labelRotation ?? 0,
+				height: styles?.xAxis?.height ?? 30,
+				labelSpacing: styles?.xAxis?.labelSpacing ?? 50,
+				labelRotation: styles?.xAxis?.labelRotation ?? 0,
 			},
 			yAxis: {
-				width: style?.yAxis?.width ?? 30,
-				labelSpacing: style?.yAxis?.labelSpacing ?? 50,
-				labelRotation: style?.yAxis?.labelRotation ?? 0,
+				width: styles?.yAxis?.width ?? 30,
+				labelSpacing: styles?.yAxis?.labelSpacing ?? 50,
+				labelRotation: styles?.yAxis?.labelRotation ?? 0,
+			},
+			grid: {
+				stroke: styles?.grid?.stroke ?? "#FFF4",
+			},
+			guideline: {
+				stroke: styles?.guideline?.stroke ?? "#FFF8",
+				width: styles?.guideline?.width ?? 1,
+				points: {
+					r: styles?.guideline?.points?.r ?? 2,
+					fill: styles?.guideline?.points?.fill ?? "white",
+				},
+			},
+			lines: {
+				width: styles?.lines?.width ?? 2,
 			},
 		}
 
@@ -167,10 +195,12 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem.appendChild(this.grid(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
 		this.svgElem.appendChild(this.guideLine)
 		this.guideLine.setAttribute("y2", (height - this.styles.xAxis.height).toString())
+		this.guideLine.setAttribute("stroke", this.styles.guideline.stroke)
+		this.guideLine.setAttribute("stroke-width", this.styles.guideline.width.toString())
 		this.svgElem.appendChild(this.axes(0, 0, width, height))
 		this.svgElem.appendChild(this.lines(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
 
-		this.guidePoints = this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: 2, fill: "white" }))
+		this.guidePoints = this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill }))
 		this.svgElem.append(...this.guidePoints)
 
 		const area = rect({ x: this.styles.yAxis.width, y: 0, width: width - this.styles.yAxis.width, height: height - this.styles.xAxis.height, fill: "transparent" })
@@ -215,21 +245,21 @@ export default class SVGraph extends HTMLElement {
 			...this.getXLabels(width).map(step => line({
 				from: [step.getPos(...this.xaxis.range) * width, 0],
 				to: [step.getPos(...this.xaxis.range) * width, height],
-				stroke: "#FFF4"
+				stroke: this.styles.grid.stroke
 			})),
 			...this.getYLabels(height).map(step => line({
 				from: [0, (1 - step.getPos(...this.yaxis.range)) * height],
 				to: [width, (1 - step.getPos(...this.yaxis.range)) * height],
-				stroke: "#FFF4"
+				stroke: this.styles.grid.stroke
 			})),
 		)
 
 	private lines = (x: number, y: number, width: number, height: number): SVGElement =>
-		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": "2" },
+		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": this.styles.lines.width },
 			...this.data.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
 					point.label.getPos(...this.xaxis.range) * width,
-					(this.yaxis.range[1].getPos(...this.yaxis.range) - point.value.getPos(...this.yaxis.range)) * height
+					(1 - point.value.getPos(...this.yaxis.range)) * height
 				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
