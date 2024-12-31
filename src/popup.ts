@@ -34,7 +34,7 @@ export default class PopupElement extends HTMLDivElement {
 				div({ class: "swatch", style: `background-color: ${colour}` }),
 				span({ class: "name" }, new Text(name)),
 				new Text(": "),
-				span({ class: "value" }, new Text(value.toString())),
+				span({ class: "value" }, new Text(value.text)),
 			))
 		}
 	}

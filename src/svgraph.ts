@@ -3,11 +3,10 @@ import { Label, NumberLabel } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
 
-export { Label, NumberLabel } from "./label"
+export { Label, NumberLabel, DateLabel, MetricLabel } from "./label"
 export { getData } from "./data"
 
-// TODO: make y-`value` also a Label so that it can be displayed as any unit (e.g. ticks, km, percentage etc)
-export type Point = { label: Label, value: number }
+export type Point = { label: Label, value: Label }
 
 export type Config = {
 	data: { [category: string]: Point[] }
@@ -29,6 +28,11 @@ export type Styles = {
 	}
 }
 
+type AxisData = {
+	labels: Label[]
+	range: [Label, Label]
+}
+
 export default class SVGraph extends HTMLElement {
 	svgElem: SVGElement
 	popupElem: PopupElement
@@ -38,8 +42,8 @@ export default class SVGraph extends HTMLElement {
 
 	data: { name: string, colour: string, points: Point[] }[]
 	styles: Styles
-	xaxis: { labels: Label[], range: [Label, Label] }
-	yaxis: { labels: Label[], range: [number, number] }
+	xaxis: AxisData
+	yaxis: AxisData
 
 	private resizeObserver: ResizeObserver
 
@@ -122,19 +126,23 @@ export default class SVGraph extends HTMLElement {
 
 	update({ data, xLabels, yLabels, styles: style }: Config, redraw = true) {
 		this.data = Object.entries(data)
-			.sort((a, b) => b[1].at(-1).value - a[1].at(-1).value)
+			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
 			.map(([name, points], i, arr) => ({ name, points, colour: turbo[Math.floor((i + 1) / (arr.length + 1) * turbo.length)] }))
 
+		// TODO: do not assume the biggest value is at the end
 		const xRange: [Label, Label] = [
-			this.data.map(({ points }) => points[0])[0].label,
-			this.data.map(({ points }) => points.at(-1)).at(-1).label,
+			this.data[0].points[0].label,
+			this.data.at(-1).points.at(-1).label,
 		]
 		const xLabels_ = xLabels ?? new Set(this.data.flatMap(({ points }) => points.map(x => x.label)))
 			.values().toArray().sort((a, b) => a.getPos(...xRange) - b.getPos(...xRange))
 		this.xaxis = { range: xRange, labels: xLabels_ }
 
-		const yRange: [number, number] = [0, this.data[0].points.maxByKey("value").value]
-		const yLabels_ = yLabels ?? [new NumberLabel(yRange[0]), new NumberLabel(yRange[1])]
+		const yRange: [Label, Label] = [
+			this.data.at(-1).points[0].value,
+			this.data[0].points.at(-1).value,
+		]
+		const yLabels_ = yLabels ?? [yRange[0], yRange[1]]
 		this.yaxis = { range: yRange, labels: yLabels_ }
 
 		this.styles = {
@@ -195,7 +203,7 @@ export default class SVGraph extends HTMLElement {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
 			...this.getYLabels(height).map(step => text({
 				x: x + width - 10,
-				y: y + (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height + 5,
+				y: y + (1 - step.getPos(...this.yaxis.range)) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labelRotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
@@ -210,8 +218,8 @@ export default class SVGraph extends HTMLElement {
 				stroke: "#FFF4"
 			})),
 			...this.getYLabels(height).map(step => line({
-				from: [0, (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height],
-				to: [width, (1 - step.getPos(new NumberLabel(this.yaxis.range[0]), new NumberLabel(this.yaxis.range[1]))) * height],
+				from: [0, (1 - step.getPos(...this.yaxis.range)) * height],
+				to: [width, (1 - step.getPos(...this.yaxis.range)) * height],
 				stroke: "#FFF4"
 			})),
 		)
@@ -221,7 +229,7 @@ export default class SVGraph extends HTMLElement {
 			...this.data.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
 					point.label.getPos(...this.xaxis.range) * width,
-					(1 - point.value / this.yaxis.range[1]) * height
+					(this.yaxis.range[1].getPos(...this.yaxis.range) - point.value.getPos(...this.yaxis.range)) * height
 				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
@@ -240,7 +248,7 @@ export default class SVGraph extends HTMLElement {
 
 		for (let i = 0; i < points.length; i++) {
 			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xaxis.range) * (rect.width - this.styles.yAxis.width) + this.styles.yAxis.width).toString())
-			this.guidePoints[i].setAttribute("cy", ((1 - points[i].value / this.yaxis.range[1]) * (rect.height - this.styles.xAxis.height)).toString())
+			this.guidePoints[i].setAttribute("cy", ((this.yaxis.range[1].getPos(...this.yaxis.range) - points[i].value.getPos(...this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
 		}
 
 		this.guideLine.classList.add("active")
