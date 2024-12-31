@@ -1,5 +1,5 @@
 import { turbo } from "./colourschemes"
-import { Label, NumberLabel } from "./label"
+import { Label } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
 
@@ -50,9 +50,7 @@ type AxisData = {
 export default class SVGraph extends HTMLElement {
 	svgElem: SVGElement
 	popupElem: PopupElement
-	guideLine: SVGElement
-
-	guidePoints: SVGCircleElement[]
+	guideElem: SVGElement
 
 	data: { name: string, colour: string, points: Point[] }[]
 	styles: Styles
@@ -76,55 +74,13 @@ export default class SVGraph extends HTMLElement {
 		const shadow = this.attachShadow({ mode: "open" })
 
 		const styleElem = document.createElement("style")
-		styleElem.textContent = `
-			.popup {
-				position: absolute;
-				padding: 10px;
-				background: #2228;
-				border: 1px solid #FFF1;
-				border-radius: 10px;
-				box-shadow: 1px 2px 20px 0px #0008;
-				backdrop-filter: blur(20px);
-			}
-			.popup h3 {
-				margin: 0 0 0.6em 0;
-			}
-			.popup p {
-				margin: 0.3em 0 0 0;
-			}
-			.popup .swatch {
-				display: inline-block;
-				width: 0.6em;
-				height: 0.6em;
-				margin-right: 0.5em;
-				border-radius: 50%;
-			}
-			.popup .name {
-				font-family: monospace;
-				font-size: 1.2em;
-				font-weight: bold;
-			}
-			
-			.popup:not(.active) {
-				display: none;
-			}
-			.guideline:not(.active) {
-				display: none;
-			}
-			.guideline:not(.active) ~ .guide-point {
-				display: none;
-			}
-				
-			.xaxis text, .yaxis text {
-				transform-box: fill-box;
-			}
-		`
+		styleElem.textContent = style
 		shadow.appendChild(styleElem)
 
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
 		shadow.appendChild(this.svgElem)
 
-		this.guideLine = line({ class: "guideline", from: [0, 0], to: [0, 0] })
+		this.guideElem = line({ class: "guideline", from: [0, 0], to: [0, 0] })
 
 		this.popupElem = new PopupElement()
 		this.popupElem.classList.add("popup")
@@ -193,15 +149,11 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem.innerHTML = ""
 
 		this.svgElem.appendChild(this.grid(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
-		this.svgElem.appendChild(this.guideLine)
-		this.guideLine.setAttribute("y2", (height - this.styles.xAxis.height).toString())
-		this.guideLine.setAttribute("stroke", this.styles.guideline.stroke)
-		this.guideLine.setAttribute("stroke-width", this.styles.guideline.width.toString())
 		this.svgElem.appendChild(this.axes(0, 0, width, height))
 		this.svgElem.appendChild(this.lines(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
 
-		this.guidePoints = this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill }))
-		this.svgElem.append(...this.guidePoints)
+		this.guideElem = this.guide(height - this.styles.xAxis.height)
+		this.svgElem.appendChild(this.guideElem)
 
 		const area = rect({ x: this.styles.yAxis.width, y: 0, width: width - this.styles.yAxis.width, height: height - this.styles.xAxis.height, fill: "transparent" })
 		this.svgElem.appendChild(area)
@@ -265,6 +217,12 @@ export default class SVGraph extends HTMLElement {
 			})
 		)
 
+	private guide = (height: number): SVGElement =>
+		g({ class: "guide", transform: `translate(${this.styles.yAxis.width}, 0)` },
+			line({ class: "guideline", from: [0, 0], to: [0, height], stroke: this.styles.guideline.stroke, "stroke-width": this.styles.guideline.width }),
+			...this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill })),
+		)
+
 	private onMouseMove(event: MouseEvent) {
 		const rect = this.svgElem.getBoundingClientRect()
 		const x = event.clientX - rect.left
@@ -276,19 +234,17 @@ export default class SVGraph extends HTMLElement {
 			this.data
 		)
 
-		for (let i = 0; i < points.length; i++) {
-			this.guidePoints[i].setAttribute("cx", (points[i].label.getPos(...this.xaxis.range) * (rect.width - this.styles.yAxis.width) + this.styles.yAxis.width).toString())
-			this.guidePoints[i].setAttribute("cy", ((this.yaxis.range[1].getPos(...this.yaxis.range) - points[i].value.getPos(...this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
-		}
+		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
+			point.setAttribute("cy", ((1 - points[i].value.getPos(...this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
+		})
 
-		this.guideLine.classList.add("active")
-		this.guideLine.setAttribute("x1", x.toString())
-		this.guideLine.setAttribute("x2", x.toString())
+		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
+		this.guideElem.classList.add("active")
 	}
 
 	private onMouseLeave(event: MouseEvent) {
 		this.popupElem.hide()
-		this.guideLine.classList.remove("active")
+		this.guideElem.classList.remove("active")
 	}
 }
 
@@ -299,6 +255,46 @@ const textAnchorForLabelRotation = (rotation: number): "start" | "middle" | "end
 
 const transformOriginForLabelRotation = (rotation: number): "left" | "center" | "right" =>
 	rotation < 0 ? "right" : rotation > 0 ? "left" : "center"
+
+const style = `
+.popup {
+	position: absolute;
+	padding: 10px;
+	background: #2228;
+	border: 1px solid #FFF1;
+	border-radius: 10px;
+	box-shadow: 1px 2px 20px 0px #0008;
+	backdrop-filter: blur(20px);
+}
+.popup h3 {
+	margin: 0 0 0.6em 0;
+}
+.popup p {
+	margin: 0.3em 0 0 0;
+}
+.popup .swatch {
+	display: inline-block;
+	width: 0.6em;
+	height: 0.6em;
+	margin-right: 0.5em;
+	border-radius: 50%;
+}
+.popup .name {
+	font-family: monospace;
+	font-size: 1.2em;
+	font-weight: bold;
+}
+
+.popup:not(.active) {
+	display: none;
+}
+.guide:not(.active) {
+	display: none;
+}
+	
+.xaxis text, .yaxis text {
+	transform-box: fill-box;
+}`
 
 declare global {
 	interface Array<T> {
