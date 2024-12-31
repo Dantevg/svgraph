@@ -1,18 +1,9 @@
 import { div, h3, p, span } from "./html"
 import { Label } from "./label"
-import { Point } from "./svgraph"
-
-const nearestIdx = (arr: number[], to: number): number =>
-	arr.map((x, idx) => [Math.abs(x - to), idx]).minBy(x => x[0])[1]
+import { nearestLabel, Point } from "./svgraph"
 
 const nearestPointForLabel = (arr: Point[], to: Label, range: [Label, Label]): Point =>
 	(arr.map(x => [x, Math.abs(x.label.getPos(...range) - to.getPos(...range))]) as [Point, number][]).minBy(x => x[1])[0]
-
-function nearestLabel(t: number, range: [Label, Label], data: { name: string; points: Point[] }[]) {
-	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(...range)), t))
-	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
-	return nearestLabels.minBy(l => Math.abs(l.getPos(...range) - t))
-}
 
 export default class PopupElement extends HTMLDivElement {
 	constructor() {

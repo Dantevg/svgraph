@@ -14,7 +14,7 @@ export class NumberAxis implements Axis<NumberLabel> {
 		const magnitude = Math.pow(10, Math.floor(Math.log10(span / n)) - 1)
 		const interval = Math.floor(span / n / magnitude) * magnitude
 
-		return [...Array(Math.ceil(span / interval)).keys().map(x =>
+		return [...Array(Math.floor(span / interval) + 1).keys().map(x =>
 			new NumberLabel(Math.floor(x * interval + this.range[0].number))
 		)]
 	}
@@ -35,7 +35,7 @@ export class DateAxis implements Axis<DateLabel> {
 
 		const interval = Math.ceil(span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.ceil(span / interval)).keys().map(x => new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range[0].number)))]
+		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range[0].number)))]
 	}
 }
 
@@ -55,7 +55,7 @@ export class TimeAxis implements Axis<TimeLabel> {
 
 		const interval = Math.ceil(span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.ceil(span / interval)).keys().map(x => new TimeLabel(x * interval + this.range[0].number))]
+		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new TimeLabel(x * interval + this.range[0].number))]
 	}
 }
 

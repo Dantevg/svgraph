@@ -2,6 +2,7 @@ import { Axis, DateAxis, NumberAxis } from "./axis"
 import { DateLabel, Label, NumberLabel } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
+import { between, clamp } from "./util"
 
 export { Label, NumberLabel, DateLabel, MetricLabel } from "./label"
 
@@ -44,15 +45,11 @@ export type Styles = {
 	}
 }
 
-type AxisData = {
-	labels: Label[]
-	range: [Label, Label]
-}
-
 export default class SVGraph extends HTMLElement {
 	svgElem: SVGElement
 	popupElem: PopupElement
 	guideElem: SVGElement
+	selectionElem: SVGElement
 
 	data: { name: string, colour: string, points: Point[] }[]
 	styles: Styles
@@ -60,6 +57,8 @@ export default class SVGraph extends HTMLElement {
 	yaxis: Axis<Label>
 
 	private resizeObserver: ResizeObserver
+	private selection: { from?: number, to?: number } = {}
+	private activeData: { name: string, colour: string, points: Point[] }[]
 
 	constructor(config: Config) {
 		super()
@@ -71,6 +70,8 @@ export default class SVGraph extends HTMLElement {
 		shadow.appendChild(styleElem)
 
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
+		this.svgElem.addEventListener("mousedown", (event: MouseEvent) => this.onMouseDown(event))
+		this.svgElem.addEventListener("mouseup", (event: MouseEvent) => this.onMouseUp(event))
 		shadow.appendChild(this.svgElem)
 
 		this.popupElem = new PopupElement()
@@ -118,6 +119,8 @@ export default class SVGraph extends HTMLElement {
 			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
 			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
 
+		this.activeData = this.data
+
 		this.xaxis = getAxis(this.data, "label")
 		this.yaxis = getAxis(this.data, "value")
 
@@ -134,10 +137,34 @@ export default class SVGraph extends HTMLElement {
 		this.guideElem = this.guide(height - this.styles.xAxis.height)
 		this.svgElem.appendChild(this.guideElem)
 
+		this.selectionElem = this.selectionOverlay(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height)
+		this.svgElem.appendChild(this.selectionElem)
+
 		const area = rect({ x: this.styles.yAxis.width, y: 0, width: width - this.styles.yAxis.width, height: height - this.styles.xAxis.height, fill: "transparent" })
 		this.svgElem.appendChild(area)
 		area.addEventListener("mousemove", (event: MouseEvent) => this.onMouseMove(event))
 		area.addEventListener("mouseleave", (event: MouseEvent) => this.onMouseLeave(event))
+	}
+
+	selectRange(from: Label, to: Label, redraw = true) {
+		this.xaxis.range = [from, to]
+		this.activeData = this.data.map(({ name, colour, points }) => ({
+			name, colour, points: points.filter(({ label }, i, arr) =>
+				labelInRange(label, this.xaxis.range)
+				|| (arr[i - 1] && labelInRange(arr[i - 1].label, this.xaxis.range))
+				|| (arr[i + 1] && labelInRange(arr[i + 1].label, this.xaxis.range))
+			)
+		})).filter(({ points }) => points.length > 0)
+
+		if (this.activeData.length == 0) {
+			// selection has no data, reset zoom
+			this.activeData = this.data
+			this.xaxis = getAxis(this.data, "label")
+		}
+
+		this.yaxis = getAxis(this.activeData, "value")
+
+		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
 	}
 
 	private axes(x: number, y: number, width: number, height: number): SVGElement {
@@ -187,24 +214,58 @@ export default class SVGraph extends HTMLElement {
 
 	private lines = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": this.styles.lines.width },
-			...this.data.map(({ name, colour, points: values }, i) => {
+			...this.activeData.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
-					point.label.getPos(...this.xaxis.range) * width,
-					(1 - point.value.getPos(...this.yaxis.range)) * height
+					clamp(point.label.getPos(...this.xaxis.range) * width, [0, width]),
+					clamp((1 - point.value.getPos(...this.yaxis.range)) * height, [0, height]),
 				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
 		)
 
+	private selectionOverlay = (x: number, y: number, width: number, height: number): SVGElement =>
+		rect({ class: "selection-overlay", x: x, y: y, width: 0, height: height, fill: "#46A4" })
+
 	private guide = (height: number): SVGElement =>
 		g({ class: "guide", transform: `translate(${this.styles.yAxis.width}, 0)` },
 			line({ class: "guideline", from: [0, 0], to: [0, height], stroke: this.styles.guideline.stroke, "stroke-width": this.styles.guideline.width }),
-			...this.data.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill })),
+			...this.activeData.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill })),
 		)
+
+	private onMouseDown(event: MouseEvent) {
+		const rect = this.svgElem.getBoundingClientRect()
+		const x = event.clientX - rect.left
+		this.selection = { from: clamp(x, [this.styles.yAxis.width, rect.width]) }
+	}
+
+	private onMouseUp(event: MouseEvent) {
+		const rect = this.svgElem.getBoundingClientRect()
+		const start = (Math.min(this.selection.from, this.selection.to) - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width)
+		const end = (Math.max(this.selection.from, this.selection.to) - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width)
+
+		this.selectRange(nearestLabel(start, this.xaxis.range, this.activeData), nearestLabel(end, this.xaxis.range, this.activeData))
+
+		this.selection = {}
+		this.selectionElem.setAttribute("width", "0")
+	}
 
 	private onMouseMove(event: MouseEvent) {
 		const rect = this.svgElem.getBoundingClientRect()
 		const x = event.clientX - rect.left
+
+		if ((event.buttons & 1) == 1) {
+			// primary (left) mouse button pressed
+			this.selection.to = clamp(x, [this.styles.yAxis.width, rect.width])
+		} else {
+			this.selection = {}
+		}
+
+		if (this.selection.from != undefined && this.selection.to != undefined) {
+			this.selectionElem.setAttribute("x", Math.min(this.selection.from, this.selection.to).toString())
+			this.selectionElem.setAttribute("width", Math.abs(this.selection.to - this.selection.from).toString())
+		} else {
+			this.selectionElem.setAttribute("width", "0")
+		}
 
 		const points = this.popupElem.update(
 			event.clientX, event.clientY,
@@ -237,6 +298,8 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
+export const labelInRange = (value: Label, [min, max]: [Label, Label]) => min.number < value.number && value.number < max.number
+
 function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: string): Axis<L> {
 	const range: [Label, Label] = [
 		data.map(({ points }) => points.minBy(p => p[key].number)[key]).minByKey("number"),
@@ -244,6 +307,15 @@ function getAxis<L extends Label>(data: { name: string, colour: string, points: 
 	]
 
 	return new range[0].axisType(range)
+}
+
+const nearestIdx = (arr: number[], to: number): number =>
+	arr.map((x, idx) => [Math.abs(x - to), idx]).minBy(x => x[0])[1]
+
+export function nearestLabel(t: number, range: [Label, Label], data: { name: string; points: Point[] }[]) {
+	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(...range)), t))
+	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
+	return nearestLabels.minBy(l => Math.abs(l.getPos(...range) - t))
 }
 
 const style = `
