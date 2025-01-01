@@ -1,5 +1,5 @@
-import { DateLabel, Label, MetricLabel, NumberLabel, TimeLabel } from "./label";
-import { Range } from "./util";
+import { DateLabel, Label, MetricLabel, NumberLabel, TimeLabel } from "./label"
+import Range from "./util/range"
 
 export interface Axis<L extends Label> {
 	range: Range<L>

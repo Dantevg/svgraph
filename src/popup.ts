@@ -1,7 +1,7 @@
-import { div, h3, p, span } from "./html"
+import { div, h3, p, span } from "./util/html"
 import { Label } from "./label"
 import { nearestLabel, Point } from "./svgraph"
-import { Range } from "./util"
+import Range from "./util/range"
 
 const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Point =>
 	(arr.map(x => [x, Math.abs(x.label.getPos(range) - to.getPos(range))]) as [Point, number][]).minBy(x => x[1])[0]

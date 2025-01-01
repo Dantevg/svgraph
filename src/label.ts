@@ -1,5 +1,5 @@
 import { DateAxis, MetricAxis, NumberAxis, TimeAxis } from "./axis"
-import { Range } from "./util"
+import Range from "./util/range"
 
 export interface Label {
 	get text(): string

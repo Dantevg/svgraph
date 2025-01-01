@@ -1,15 +1,6 @@
-// Array-like functions for objects
-// https://stackoverflow.com/a/37616104
-
-export const filter = <V>(obj: { [k: string]: V }, predicate: (_: V) => boolean): { [k: string]: V } =>
-	Object.fromEntries(Object.entries(obj).filter(([_, v]) => predicate(v)))
-
-export const map = <V>(obj: { [k: string]: V }, mapper: (k: string, v: V) => V) =>
-	Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, mapper(k, v)]))
-
 const num = (n: number | { number: number }) => typeof n === "number" ? n : n.number
 
-export class Range<T extends number | { number: number }> {
+export default class Range<T extends number | { number: number }> {
 	constructor(public min: T, public max: T) { }
 
 	/**

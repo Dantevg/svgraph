@@ -1,14 +1,14 @@
 import { Axis } from "./axis"
 import { Label } from "./label"
 import PopupElement from "./popup"
-import { circle, g, line, polyline, rect, svg, text } from "./svg"
-import { Range } from "./util"
+import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
+import Range from "./util/range"
 
-export { Label, NumberLabel, DateLabel, MetricLabel } from "./label"
+export * from "./label"
 
 // TODO: remove these re-exports in release, only for testing
 export { getData } from "./data"
-export * from "./colourschemes"
+export * from "./util/colourschemes"
 
 export type Point = { label: Label, value: Label }
 
@@ -308,7 +308,7 @@ function getAxis<L extends Label>(data: { name: string, colour: string, points: 
 const nearestIdx = (arr: number[], to: number): number =>
 	arr.map((x, idx) => [Math.abs(x - to), idx]).minBy(x => x[0])[1]
 
-export function nearestLabel(t: number, range: Range<Label>, data: { name: string; points: Point[] }[]) {
+export function nearestLabel(t: number, range: Range<Label>, data: { name: string, points: Point[] }[]) {
 	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(range)), t))
 	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
 	return nearestLabels.minBy(l => Math.abs(l.getPos(range) - t))
