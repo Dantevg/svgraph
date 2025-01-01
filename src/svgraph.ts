@@ -20,10 +20,12 @@ export type Config = {
 type AxisStyle = {
 	colour: string
 	strokeWidth: number
-	labelSpacing: number
-	labelRotation: number
-	labelColour: string
-	labelFontSize: string
+	labels: {
+		spacing: number
+		rotation: number
+		colour: string
+		fontSize: string
+	}
 }
 
 export type Styles = {
@@ -98,22 +100,26 @@ export default class SVGraph extends HTMLElement {
 				height: styles?.xAxis?.height ?? 30,
 				colour: styles?.xAxis?.colour ?? "white",
 				strokeWidth: styles?.xAxis?.strokeWidth ?? 1,
-				labelSpacing: styles?.xAxis?.labelSpacing ?? 30,
-				labelRotation: styles?.xAxis?.labelRotation ?? 0,
-				labelColour: styles?.xAxis?.labelColour ?? styles?.xAxis?.colour ?? "#FFF8",
-				labelFontSize: styles?.xAxis?.labelFontSize ?? "0.8em",
+				labels: {
+					spacing: styles?.xAxis?.labels?.spacing ?? 30,
+					rotation: styles?.xAxis?.labels?.rotation ?? 0,
+					colour: styles?.xAxis?.labels?.colour ?? styles?.xAxis?.colour ?? "#FFF8",
+					fontSize: styles?.xAxis?.labels?.fontSize ?? "0.8em",
+				},
 			},
 			yAxis: {
 				width: styles?.yAxis?.width ?? 30,
 				colour: styles?.yAxis?.colour ?? "white",
 				strokeWidth: styles?.yAxis?.strokeWidth ?? 1,
-				labelSpacing: styles?.yAxis?.labelSpacing ?? 50,
-				labelRotation: styles?.yAxis?.labelRotation ?? 0,
-				labelColour: styles?.yAxis?.labelColour ?? styles?.xAxis?.colour ?? "#FFF8",
-				labelFontSize: styles?.yAxis?.labelFontSize ?? "0.8em",
+				labels: {
+					spacing: styles?.yAxis?.labels?.spacing ?? 50,
+					rotation: styles?.yAxis?.labels?.rotation ?? 0,
+					colour: styles?.yAxis?.labels?.colour ?? styles?.yAxis?.colour ?? "#FFF8",
+					fontSize: styles?.yAxis?.labels?.fontSize ?? "0.8em",
+				},
 			},
 			grid: {
-				stroke: styles?.grid?.stroke ?? "#FFF4",
+				stroke: styles?.grid?.stroke ?? "#FFF2",
 			},
 			guideline: {
 				stroke: styles?.guideline?.stroke ?? "#FFF8",
@@ -190,15 +196,15 @@ export default class SVGraph extends HTMLElement {
 				stroke: this.styles.xAxis.colour,
 				"stroke-width": this.styles.xAxis.strokeWidth
 			}),
-			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => text({
+			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labels.spacing)).map(step => text({
 				class: "tick-label",
 				x: x + step.getPos(this.xaxis.range) * width,
 				y: y + 20,
-				transform: `rotate(${this.styles.xAxis.labelRotation})`,
-				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labelRotation),
-				style: `transform-origin: ${transformOriginForLabelRotation(this.styles.xAxis.labelRotation)}`,
-				fill: this.styles.xAxis.labelColour,
-				"font-size": this.styles.xAxis.labelFontSize,
+				transform: `rotate(${this.styles.xAxis.labels.rotation})`,
+				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labels.rotation),
+				style: `transform-origin: ${transformOriginForLabelRotation(this.styles.xAxis.labels.rotation)}`,
+				fill: this.styles.xAxis.labels.colour,
+				"font-size": this.styles.xAxis.labels.fontSize,
 			}, new Text(step.text)))
 		)
 
@@ -210,27 +216,27 @@ export default class SVGraph extends HTMLElement {
 				stroke: this.styles.yAxis.colour,
 				"stroke-width": this.styles.yAxis.strokeWidth
 			}),
-			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => text({
+			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labels.spacing)).map(step => text({
 				class: "tick-label",
 				x: x + width - 10,
 				y: y + (1 - step.getPos(this.yaxis.range)) * height + 5,
-				transform: `rotate(${this.styles.yAxis.labelRotation})`,
+				transform: `rotate(${this.styles.yAxis.labels.rotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
-				fill: this.styles.yAxis.labelColour,
-				"font-size": this.styles.yAxis.labelFontSize,
+				fill: this.styles.yAxis.labels.colour,
+				"font-size": this.styles.yAxis.labels.fontSize,
 			}, new Text(step.text)))
 		)
 
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
-			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => line({
+			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labels.spacing)).map(step => line({
 				class: "gridline-v",
 				from: [step.getPos(this.xaxis.range) * width, 0],
 				to: [step.getPos(this.xaxis.range) * width, height],
 				stroke: this.styles.grid.stroke
 			})),
-			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => line({
+			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labels.spacing)).map(step => line({
 				class: "gridline-h",
 				from: [0, (1 - step.getPos(this.yaxis.range)) * height],
 				to: [width, (1 - step.getPos(this.yaxis.range)) * height],
