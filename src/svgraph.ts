@@ -1,8 +1,8 @@
-import { Axis, DateAxis, NumberAxis } from "./axis"
-import { DateLabel, Label, NumberLabel } from "./label"
+import { Axis } from "./axis"
+import { Label } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./svg"
-import { between, clamp } from "./util"
+import { Range } from "./util"
 
 export { Label, NumberLabel, DateLabel, MetricLabel } from "./label"
 
@@ -59,6 +59,8 @@ export default class SVGraph extends HTMLElement {
 	private resizeObserver: ResizeObserver
 	private selection: { from?: number, to?: number } = {}
 	private activeData: { name: string, colour: string, points: Point[] }[]
+
+	get canvasCoordRange() { return new Range(this.styles.yAxis.width, this.svgElem.clientWidth) }
 
 	constructor(config: Config) {
 		super()
@@ -147,12 +149,12 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	selectRange(from: Label, to: Label, redraw = true) {
-		this.xaxis.range = [from, to]
+		this.xaxis.range = new Range(from, to)
 		this.activeData = this.data.map(({ name, colour, points }) => ({
 			name, colour, points: points.filter(({ label }, i, arr) =>
-				labelInRange(label, this.xaxis.range)
-				|| (arr[i - 1] && labelInRange(arr[i - 1].label, this.xaxis.range))
-				|| (arr[i + 1] && labelInRange(arr[i + 1].label, this.xaxis.range))
+				this.xaxis.range.contains(label)
+				|| (arr[i - 1] && this.xaxis.range.contains(arr[i - 1].label))
+				|| (arr[i + 1] && this.xaxis.range.contains(arr[i + 1].label))
 			)
 		})).filter(({ points }) => points.length > 0)
 
@@ -178,7 +180,7 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "xaxis" },
 			line({ from: [x, y], to: [x + width, y], stroke: "white" }),
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => text({
-				x: x + step.getPos(...this.xaxis.range) * width,
+				x: x + step.getPos(this.xaxis.range) * width,
 				y: y + 20,
 				transform: `rotate(${this.styles.xAxis.labelRotation})`,
 				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labelRotation),
@@ -191,7 +193,7 @@ export default class SVGraph extends HTMLElement {
 			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => text({
 				x: x + width - 10,
-				y: y + (1 - step.getPos(...this.yaxis.range)) * height + 5,
+				y: y + (1 - step.getPos(this.yaxis.range)) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labelRotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
@@ -201,13 +203,13 @@ export default class SVGraph extends HTMLElement {
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => line({
-				from: [step.getPos(...this.xaxis.range) * width, 0],
-				to: [step.getPos(...this.xaxis.range) * width, height],
+				from: [step.getPos(this.xaxis.range) * width, 0],
+				to: [step.getPos(this.xaxis.range) * width, height],
 				stroke: this.styles.grid.stroke
 			})),
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => line({
-				from: [0, (1 - step.getPos(...this.yaxis.range)) * height],
-				to: [width, (1 - step.getPos(...this.yaxis.range)) * height],
+				from: [0, (1 - step.getPos(this.yaxis.range)) * height],
+				to: [width, (1 - step.getPos(this.yaxis.range)) * height],
 				stroke: this.styles.grid.stroke
 			})),
 		)
@@ -216,8 +218,8 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": this.styles.lines.width },
 			...this.activeData.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
-					clamp(point.label.getPos(...this.xaxis.range) * width, [0, width]),
-					clamp((1 - point.value.getPos(...this.yaxis.range)) * height, [0, height]),
+					Range.UNIT.clamp(point.label.getPos(this.xaxis.range)) * width,
+					Range.UNIT.clamp((1 - point.value.getPos(this.yaxis.range))) * height,
 				] as [number, number])
 				return polyline({ points, fill: "none", stroke: colour })
 			})
@@ -233,17 +235,14 @@ export default class SVGraph extends HTMLElement {
 		)
 
 	private onMouseDown(event: MouseEvent) {
-		const rect = this.svgElem.getBoundingClientRect()
-		const x = event.clientX - rect.left
-		this.selection = { from: clamp(x, [this.styles.yAxis.width, rect.width]) }
+		this.selection = { from: Range.UNIT.clamp(this.canvasCoordRange.normalize(event.clientX - this.svgElem.getBoundingClientRect().left)) }
 	}
 
 	private onMouseUp(event: MouseEvent) {
-		const rect = this.svgElem.getBoundingClientRect()
-		const start = (Math.min(this.selection.from, this.selection.to) - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width)
-		const end = (Math.max(this.selection.from, this.selection.to) - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width)
-
-		this.selectRange(nearestLabel(start, this.xaxis.range, this.activeData), nearestLabel(end, this.xaxis.range, this.activeData))
+		this.selectRange(
+			nearestLabel(Math.min(this.selection.from, this.selection.to), this.xaxis.range, this.activeData),
+			nearestLabel(Math.max(this.selection.from, this.selection.to), this.xaxis.range, this.activeData)
+		)
 
 		this.selection = {}
 		this.selectionElem.setAttribute("width", "0")
@@ -251,40 +250,39 @@ export default class SVGraph extends HTMLElement {
 
 	private onMouseMove(event: MouseEvent) {
 		const rect = this.svgElem.getBoundingClientRect()
-		const x = event.clientX - rect.left
+		const t = this.canvasCoordRange.normalize(event.clientX - rect.left)
 
-		if ((event.buttons & 1) == 1) {
-			// primary (left) mouse button pressed
-			this.selection.to = clamp(x, [this.styles.yAxis.width, rect.width])
-		} else {
-			this.selection = {}
-		}
+		this.handleSelection(t, event.buttons)
 
-		if (this.selection.from != undefined && this.selection.to != undefined) {
-			this.selectionElem.setAttribute("x", Math.min(this.selection.from, this.selection.to).toString())
-			this.selectionElem.setAttribute("width", Math.abs(this.selection.to - this.selection.from).toString())
-		} else {
-			this.selectionElem.setAttribute("width", "0")
-		}
-
-		const points = this.popupElem.update(
-			event.clientX, event.clientY,
-			(x - this.styles.yAxis.width) / (rect.width - this.styles.yAxis.width),
-			this.xaxis.range,
-			this.data
-		)
+		const points = this.popupElem.update(event.clientX, event.clientY, t, this.xaxis.range, this.data)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
-			point.setAttribute("cy", ((1 - points[i].value.getPos(...this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
+			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
 		})
 
-		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
+		this.guideElem.setAttribute("transform", `translate(${event.clientX - rect.left}, 0)`)
 		this.guideElem.classList.add("active")
 	}
 
 	private onMouseLeave(event: MouseEvent) {
 		this.popupElem.hide()
 		this.guideElem.classList.remove("active")
+	}
+
+	private handleSelection(t: number, buttons: number) {
+		if ((buttons & 1) == 1) {
+			// primary (left) mouse button pressed
+			this.selection.to = Range.UNIT.clamp(t)
+		} else {
+			this.selection = {}
+		}
+
+		if (this.selection.from != undefined && this.selection.to != undefined) {
+			this.selectionElem.setAttribute("x", this.canvasCoordRange.lerp(Math.min(this.selection.from, this.selection.to)).toString())
+			this.selectionElem.setAttribute("width", (this.canvasCoordRange.lerp(Math.abs(this.selection.to - this.selection.from)) - this.styles.yAxis.width).toString())
+		} else {
+			this.selectionElem.setAttribute("width", "0")
+		}
 	}
 }
 
@@ -298,24 +296,22 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
-export const labelInRange = (value: Label, [min, max]: [Label, Label]) => min.number < value.number && value.number < max.number
-
 function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: string): Axis<L> {
-	const range: [Label, Label] = [
+	const range = new Range(
 		data.map(({ points }) => points.minBy(p => p[key].number)[key]).minByKey("number"),
 		data.map(({ points }) => points.maxBy(p => p[key].number)[key]).maxByKey("number"),
-	]
+	)
 
-	return new range[0].axisType(range)
+	return new range.min.axisType(range)
 }
 
 const nearestIdx = (arr: number[], to: number): number =>
 	arr.map((x, idx) => [Math.abs(x - to), idx]).minBy(x => x[0])[1]
 
-export function nearestLabel(t: number, range: [Label, Label], data: { name: string; points: Point[] }[]) {
-	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(...range)), t))
+export function nearestLabel(t: number, range: Range<Label>, data: { name: string; points: Point[] }[]) {
+	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(range)), t))
 	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
-	return nearestLabels.minBy(l => Math.abs(l.getPos(...range) - t))
+	return nearestLabels.minBy(l => Math.abs(l.getPos(range) - t))
 }
 
 const style = `

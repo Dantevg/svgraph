@@ -1,16 +1,12 @@
-import { Axis, DateAxis, MetricAxis, NumberAxis, TimeAxis } from "./axis"
+import { DateAxis, MetricAxis, NumberAxis, TimeAxis } from "./axis"
+import { Range } from "./util"
 
 export interface Label {
 	get text(): string
 	get number(): number
 	get axisType(): any
-	getPos(min: this, max: this): number
+	getPos(range: Range<Label>): number
 }
-
-/**
- * Un-lerps a value in a given [min,max] range to [0,1]
- */
-const unlerp = (value, min, max) => (value - min) / (max - min)
 
 export class NumberLabel implements Label {
 	constructor(public value: number) { }
@@ -19,7 +15,7 @@ export class NumberLabel implements Label {
 	get number() { return this.value }
 	get axisType() { return NumberAxis }
 
-	getPos = (min: NumberLabel, max: NumberLabel) => unlerp(this.number, min.number, max.number)
+	getPos = (range: Range<Label>) => range.normalize(this.number)
 }
 
 export class DateLabel implements Label {
@@ -29,7 +25,7 @@ export class DateLabel implements Label {
 	get number() { return this.value.valueOf() }
 	get axisType() { return DateAxis }
 
-	getPos = (min: DateLabel, max: DateLabel) => unlerp(this.number, min.number, max.number)
+	getPos = (range: Range<Label>) => range.normalize(this.number)
 }
 
 export class TimeLabel implements Label {
@@ -53,7 +49,7 @@ export class TimeLabel implements Label {
 	get number() { return this.value }
 	get axisType() { return TimeAxis }
 
-	getPos = (min: TimeLabel, max: TimeLabel) => unlerp(this.number, min.number, max.number)
+	getPos = (range: Range<Label>) => range.normalize(this.number)
 }
 
 export class MetricLabel implements Label {
@@ -66,7 +62,7 @@ export class MetricLabel implements Label {
 	get number() { return this.value }
 	get axisType() { return MetricAxis }
 
-	getPos = (min: MetricLabel, max: MetricLabel) => unlerp(this.number, min.number, max.number)
+	getPos = (range: Range<Label>) => range.normalize(this.number)
 
 	static units = ["n", "u", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y"]
 	static unitsStartOffset = 3

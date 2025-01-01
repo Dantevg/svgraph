@@ -1,31 +1,30 @@
 import { DateLabel, Label, MetricLabel, NumberLabel, TimeLabel } from "./label";
+import { Range } from "./util";
 
 export interface Axis<L extends Label> {
-	range: [L, L]
+	range: Range<L>
 	getTicks(n: number): L[]
 }
 
 export class NumberAxis implements Axis<NumberLabel> {
-	constructor(public range: [NumberLabel, NumberLabel]) { }
+	constructor(public range: Range<NumberLabel>) { }
 
 	getTicks(n: number): NumberLabel[] {
-		const span = (this.range[1].number - this.range[0].number)
+		const magnitude = Math.pow(10, Math.floor(Math.log10(this.range.span / n)) - 1)
+		const interval = Math.floor(this.range.span / n / magnitude) * magnitude
 
-		const magnitude = Math.pow(10, Math.floor(Math.log10(span / n)) - 1)
-		const interval = Math.floor(span / n / magnitude) * magnitude
-
-		return [...Array(Math.floor(span / interval) + 1).keys().map(x =>
-			new NumberLabel(Math.floor(x * interval + this.range[0].number))
+		return [...Array(Math.floor(this.range.span / interval) + 1).keys().map(x =>
+			new NumberLabel(Math.floor(x * interval + this.range.min.number))
 		)]
 	}
 }
 
 export class DateAxis implements Axis<DateLabel> {
-	constructor(public range: [DateLabel, DateLabel]) { }
+	constructor(public range: Range<DateLabel>) { }
 
 	getTicks(n: number): DateLabel[] {
 		// total span in number of days
-		const span = (this.range[1].number - this.range[0].number) / 24 / 60 / 60 / 1000
+		const span = this.range.span / 24 / 60 / 60 / 1000
 
 		const unitOffset = (span / 30 > n)
 			? 30 // "months"
@@ -35,36 +34,34 @@ export class DateAxis implements Axis<DateLabel> {
 
 		const interval = Math.ceil(span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range[0].number)))]
+		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range.min.number)))]
 	}
 }
 
 export class TimeAxis implements Axis<TimeLabel> {
-	constructor(public range: [TimeLabel, TimeLabel]) { }
+	constructor(public range: Range<TimeLabel>) { }
 
 	getTicks(n: number): TimeLabel[] {
-		const span = (this.range[1].number - this.range[0].number)
-
-		const unitOffset = (span / 24 / 60 / 60 > n)
+		const unitOffset = (this.range.span / 24 / 60 / 60 > n)
 			? 24 * 60 * 60 // days
-			: (span / 60 / 60 > n)
+			: (this.range.span / 60 / 60 > n)
 				? 60 * 60 // hours
-				: (span / 60 > n)
+				: (this.range.span / 60 > n)
 					? 60 // minutes
 					: 1 // seconds
 
-		const interval = Math.ceil(span / unitOffset / n) * unitOffset
+		const interval = Math.ceil(this.range.span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new TimeLabel(x * interval + this.range[0].number))]
+		return [...Array(Math.floor(this.range.span / interval) + 1).keys().map(x => new TimeLabel(x * interval + this.range.min.number))]
 	}
 }
 
 export class MetricAxis implements Axis<MetricLabel> {
-	constructor(public range: [MetricLabel, MetricLabel]) { }
+	constructor(public range: Range<MetricLabel>) { }
 
 	getTicks = (n: number): MetricLabel[] =>
 		[...Array(n).keys().map(x => new MetricLabel(
-			Math.floor((x / (n - 1)) * (this.range[1].number - this.range[0].number) + this.range[0].number),
-			this.range[0].unit
+			Math.floor(this.range.lerp(x / (n - 1))),
+			this.range.min.unit
 		))]
 }
