@@ -14,11 +14,13 @@ type stringable = string | number | boolean
 type DefaultAttrs = {
 	id?: string
 	class?: string
+	style?: string
 	transform?: string
 	fill?: string
 	stroke?: string
 	"stroke-width"?: stringable
-	style?: string
+	"font-size"?: stringable
+	[_: `data-${string}`]: string
 }
 
 export const svg = (attrs: { width: string, height: string, viewBox?: string, preserveAspectRatio?: string, overflow?: string } & DefaultAttrs, ...children: Node[]) =>

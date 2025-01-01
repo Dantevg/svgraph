@@ -6,7 +6,7 @@ export default class Range<T extends number | { number: number }> {
 	/**
 	 * The unit range [0,1]
 	 */
-	static UNIT = new Range(0, 1)
+	static UNIT = new Range(0, 1) as Range<number>
 
 	/**
 	 * The span of this range, i.e. `max - min`

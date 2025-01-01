@@ -17,18 +17,19 @@ export type Config = {
 	styles?: Partial<Styles>
 }
 
+type AxisStyle = {
+	colour: string
+	strokeWidth: number
+	labelSpacing: number
+	labelRotation: number
+	labelColour: string
+	labelFontSize: string
+}
+
 export type Styles = {
 	colourscheme: string[]
-	xAxis: {
-		height: number
-		labelSpacing: number
-		labelRotation: number
-	}
-	yAxis: {
-		width: number
-		labelSpacing: number
-		labelRotation: number
-	}
+	xAxis: AxisStyle & { height: number }
+	yAxis: AxisStyle & { width: number }
 	grid: {
 		stroke: string
 	}
@@ -74,6 +75,8 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
 		this.svgElem.addEventListener("mousedown", (event: MouseEvent) => this.onMouseDown(event))
 		this.svgElem.addEventListener("mouseup", (event: MouseEvent) => this.onMouseUp(event))
+		this.svgElem.addEventListener("mousemove", (event: MouseEvent) => this.onMouseMove(event))
+		this.svgElem.addEventListener("mouseleave", (event: MouseEvent) => this.onMouseLeave(event))
 		shadow.appendChild(this.svgElem)
 
 		this.popupElem = new PopupElement()
@@ -93,13 +96,21 @@ export default class SVGraph extends HTMLElement {
 			colourscheme: styles?.colourscheme ?? ["black"],
 			xAxis: {
 				height: styles?.xAxis?.height ?? 30,
+				colour: styles?.xAxis?.colour ?? "white",
+				strokeWidth: styles?.xAxis?.strokeWidth ?? 1,
 				labelSpacing: styles?.xAxis?.labelSpacing ?? 30,
 				labelRotation: styles?.xAxis?.labelRotation ?? 0,
+				labelColour: styles?.xAxis?.labelColour ?? styles?.xAxis?.colour ?? "#FFF8",
+				labelFontSize: styles?.xAxis?.labelFontSize ?? "0.8em",
 			},
 			yAxis: {
 				width: styles?.yAxis?.width ?? 30,
+				colour: styles?.yAxis?.colour ?? "white",
+				strokeWidth: styles?.yAxis?.strokeWidth ?? 1,
 				labelSpacing: styles?.yAxis?.labelSpacing ?? 50,
 				labelRotation: styles?.yAxis?.labelRotation ?? 0,
+				labelColour: styles?.yAxis?.labelColour ?? styles?.xAxis?.colour ?? "#FFF8",
+				labelFontSize: styles?.yAxis?.labelFontSize ?? "0.8em",
 			},
 			grid: {
 				stroke: styles?.grid?.stroke ?? "#FFF4",
@@ -133,19 +144,14 @@ export default class SVGraph extends HTMLElement {
 		this.svgElem.innerHTML = ""
 
 		this.svgElem.appendChild(this.grid(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
-		this.svgElem.appendChild(this.axes(0, 0, width, height))
 		this.svgElem.appendChild(this.lines(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height))
+		this.svgElem.appendChild(this.axes(0, 0, width, height))
 
 		this.guideElem = this.guide(height - this.styles.xAxis.height)
 		this.svgElem.appendChild(this.guideElem)
 
 		this.selectionElem = this.selectionOverlay(this.styles.yAxis.width, 0, width - this.styles.yAxis.width, height - this.styles.xAxis.height)
 		this.svgElem.appendChild(this.selectionElem)
-
-		const area = rect({ x: this.styles.yAxis.width, y: 0, width: width - this.styles.yAxis.width, height: height - this.styles.xAxis.height, fill: "transparent" })
-		this.svgElem.appendChild(area)
-		area.addEventListener("mousemove", (event: MouseEvent) => this.onMouseMove(event))
-		area.addEventListener("mouseleave", (event: MouseEvent) => this.onMouseLeave(event))
 	}
 
 	selectRange(from: Label, to: Label, redraw = true) {
@@ -178,36 +184,54 @@ export default class SVGraph extends HTMLElement {
 
 	private xAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "xaxis" },
-			line({ from: [x, y], to: [x + width, y], stroke: "white" }),
+			line({
+				from: [x - this.styles.yAxis.strokeWidth, y + this.styles.xAxis.strokeWidth / 2],
+				to: [x + width, y + this.styles.xAxis.strokeWidth / 2],
+				stroke: this.styles.xAxis.colour,
+				"stroke-width": this.styles.xAxis.strokeWidth
+			}),
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => text({
+				class: "tick-label",
 				x: x + step.getPos(this.xaxis.range) * width,
 				y: y + 20,
 				transform: `rotate(${this.styles.xAxis.labelRotation})`,
 				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labelRotation),
 				style: `transform-origin: ${transformOriginForLabelRotation(this.styles.xAxis.labelRotation)}`,
+				fill: this.styles.xAxis.labelColour,
+				"font-size": this.styles.xAxis.labelFontSize,
 			}, new Text(step.text)))
 		)
 
 	private yAxis = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "yaxis" },
-			line({ from: [x + width, y], to: [x + width, y + height], stroke: "white" }),
+			line({
+				from: [x + width - this.styles.yAxis.strokeWidth / 2, y],
+				to: [x + width - this.styles.yAxis.strokeWidth / 2, y + height],
+				stroke: this.styles.yAxis.colour,
+				"stroke-width": this.styles.yAxis.strokeWidth
+			}),
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => text({
+				class: "tick-label",
 				x: x + width - 10,
 				y: y + (1 - step.getPos(this.yaxis.range)) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labelRotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
+				fill: this.styles.yAxis.labelColour,
+				"font-size": this.styles.yAxis.labelFontSize,
 			}, new Text(step.text)))
 		)
 
 	private grid = (x: number, y: number, width: number, height: number): SVGElement =>
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labelSpacing)).map(step => line({
+				class: "gridline-v",
 				from: [step.getPos(this.xaxis.range) * width, 0],
 				to: [step.getPos(this.xaxis.range) * width, height],
 				stroke: this.styles.grid.stroke
 			})),
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labelSpacing)).map(step => line({
+				class: "gridline-h",
 				from: [0, (1 - step.getPos(this.yaxis.range)) * height],
 				to: [width, (1 - step.getPos(this.yaxis.range)) * height],
 				stroke: this.styles.grid.stroke
@@ -221,7 +245,7 @@ export default class SVGraph extends HTMLElement {
 					Range.UNIT.clamp(point.label.getPos(this.xaxis.range)) * width,
 					Range.UNIT.clamp((1 - point.value.getPos(this.yaxis.range))) * height,
 				] as [number, number])
-				return polyline({ points, fill: "none", stroke: colour })
+				return polyline({ "data-name": name, points, fill: "none", stroke: colour })
 			})
 		)
 
@@ -235,14 +259,18 @@ export default class SVGraph extends HTMLElement {
 		)
 
 	private onMouseDown(event: MouseEvent) {
-		this.selection = { from: Range.UNIT.clamp(this.canvasCoordRange.normalize(event.clientX - this.svgElem.getBoundingClientRect().left)) }
+		if (this.isWithinGraphArea(event.clientX, event.clientY)) {
+			this.selection = { from: Range.UNIT.clamp(this.canvasCoordRange.normalize(event.clientX - this.svgElem.getBoundingClientRect().left)) }
+		}
 	}
 
 	private onMouseUp(event: MouseEvent) {
-		this.selectRange(
-			nearestLabel(Math.min(this.selection.from, this.selection.to), this.xaxis.range, this.activeData),
-			nearestLabel(Math.max(this.selection.from, this.selection.to), this.xaxis.range, this.activeData)
-		)
+		if (this.selection.from != undefined) {
+			this.selectRange(
+				nearestLabel(Math.min(this.selection.from, this.selection.to), this.xaxis.range, this.activeData),
+				nearestLabel(Math.max(this.selection.from, this.selection.to), this.xaxis.range, this.activeData)
+			)
+		}
 
 		this.selection = {}
 		this.selectionElem.setAttribute("width", "0")
@@ -252,16 +280,13 @@ export default class SVGraph extends HTMLElement {
 		const rect = this.svgElem.getBoundingClientRect()
 		const t = this.canvasCoordRange.normalize(event.clientX - rect.left)
 
-		this.handleSelection(t, event.buttons)
-
-		const points = this.popupElem.update(event.clientX, event.clientY, t, this.xaxis.range, this.data)
-
-		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
-			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
-		})
-
-		this.guideElem.setAttribute("transform", `translate(${event.clientX - rect.left}, 0)`)
-		this.guideElem.classList.add("active")
+		if (this.isWithinGraphArea(event.clientX, event.clientY)) {
+			this.handleSelection(t, event.buttons)
+			this.handleHover(t, event.clientX, event.clientY, rect)
+		} else {
+			this.popupElem.hide()
+			this.guideElem.classList.remove("active")
+		}
 	}
 
 	private onMouseLeave(event: MouseEvent) {
@@ -283,6 +308,23 @@ export default class SVGraph extends HTMLElement {
 		} else {
 			this.selectionElem.setAttribute("width", "0")
 		}
+	}
+
+	private handleHover(t: number, clientX: number, clientY: number, rect: DOMRect) {
+		const points = this.popupElem.update(clientX, clientY, t, this.xaxis.range, this.data)
+
+		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
+			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
+		})
+
+		this.guideElem.setAttribute("transform", `translate(${clientX - rect.left}, 0)`)
+		this.guideElem.classList.add("active")
+	}
+
+	private isWithinGraphArea(clientX: number, clientY: number): boolean {
+		const rect = this.svgElem.getBoundingClientRect()
+		return new Range(rect.left + this.styles.yAxis.width, rect.right).contains(clientX)
+			&& new Range(rect.top, rect.bottom - this.styles.xAxis.height).contains(clientY)
 	}
 }
 
