@@ -11,6 +11,7 @@ type DefaultAttrs = {
 	id?: string
 	class?: string
 	style?: string
+	[_: `data-${string}`]: string
 }
 
 export const div = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("div", attrs, children)

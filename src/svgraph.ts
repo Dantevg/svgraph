@@ -3,6 +3,7 @@ import { Label } from "./label"
 import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import Range from "./util/range"
+import LegendElement from "./legend"
 
 export * from "./label"
 
@@ -51,6 +52,7 @@ export type Styles = {
 export default class SVGraph extends HTMLElement {
 	svgElem: SVGElement
 	popupElem: PopupElement
+	legendElem: LegendElement
 	guideElem: SVGElement
 	selectionElem: SVGElement
 
@@ -74,6 +76,9 @@ export default class SVGraph extends HTMLElement {
 		styleElem.textContent = style
 		shadow.appendChild(styleElem)
 
+		this.legendElem = new LegendElement(() => this.updateActiveData())
+		shadow.appendChild(this.legendElem)
+
 		this.svgElem = svg({ width: "100%", height: "100%", overflow: "visible", fill: "white" })
 		this.svgElem.addEventListener("mousedown", (event: MouseEvent) => this.onMouseDown(event))
 		this.svgElem.addEventListener("mouseup", (event: MouseEvent) => this.onMouseUp(event))
@@ -82,7 +87,6 @@ export default class SVGraph extends HTMLElement {
 		shadow.appendChild(this.svgElem)
 
 		this.popupElem = new PopupElement()
-		this.popupElem.classList.add("popup")
 		shadow.appendChild(this.popupElem)
 
 		this.resizeObserver = new ResizeObserver((entries) => {
@@ -138,12 +142,11 @@ export default class SVGraph extends HTMLElement {
 			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
 			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
 
-		this.activeData = this.data
-
 		this.xaxis = getAxis(this.data, "label")
 		this.yaxis = getAxis(this.data, "value")
+		this.legendElem.update(this.data)
 
-		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
+		this.updateActiveData(redraw)
 	}
 
 	draw(width: number, height: number) {
@@ -162,20 +165,29 @@ export default class SVGraph extends HTMLElement {
 
 	selectRange(from: Label, to: Label, redraw = true) {
 		this.xaxis.range = new Range(from, to)
-		this.activeData = this.data.map(({ name, colour, points }) => ({
-			name, colour, points: points.filter(({ label }, i, arr) =>
-				this.xaxis.range.contains(label)
-				|| (arr[i - 1] && this.xaxis.range.contains(arr[i - 1].label))
-				|| (arr[i + 1] && this.xaxis.range.contains(arr[i + 1].label))
-			)
-		})).filter(({ points }) => points.length > 0)
+		this.updateActiveData(false)
 
 		if (this.activeData.length == 0) {
 			// selection has no data, reset zoom
-			this.activeData = this.data
 			this.xaxis = getAxis(this.data, "label")
+			this.updateActiveData(false)
 		}
 
+		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
+	}
+
+	private updateActiveData(redraw = true) {
+		this.activeData = this.data
+			.filter(({ name }) => !this.legendElem.disabled.has(name))
+			.map(({ name, colour, points }) => ({
+				name, colour, points: points.filter(({ label }, i, arr) =>
+					this.xaxis.range.contains(label)
+					|| (arr[i - 1] && this.xaxis.range.contains(arr[i - 1].label))
+					|| (arr[i + 1] && this.xaxis.range.contains(arr[i + 1].label))
+				)
+			})).filter(({ points }) => points.length > 0)
+
+		this.xaxis = getAxis(this.activeData, "label")
 		this.yaxis = getAxis(this.activeData, "value")
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
@@ -363,38 +375,58 @@ export function nearestLabel(t: number, range: Range<Label>, data: { name: strin
 }
 
 const style = `
-.popup {
+svg-popup {
 	position: absolute;
-	padding: 10px;
+	padding: 0.5em 0.6em;
 	background: #2228;
 	border: 1px solid #FFF1;
 	border-radius: 10px;
 	box-shadow: 1px 2px 20px 0px #0008;
 	backdrop-filter: blur(20px);
 }
-.popup h3 {
+svg-popup h3 {
 	margin: 0 0 0.6em 0;
 }
-.popup p {
+svg-popup p {
 	margin: 0.3em 0 0 0;
 }
-.popup .swatch {
-	display: inline-block;
-	width: 0.6em;
-	height: 0.6em;
-	margin-right: 0.5em;
-	border-radius: 50%;
-}
-.popup .name {
+svg-popup .name {
 	font-family: monospace;
 	font-size: 1.2em;
 	font-weight: bold;
 }
 
-.popup:not(.active) {
-	display: none;
+svg-legend {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	padding: 5px 10px;
 }
-.guide:not(.active) {
+svg-legend .legend-item {
+	padding: 0.25em 0.6em;
+	border: 1px solid transparent;
+	border-radius: 1em;
+}
+svg-legend .legend-item:hover {
+	background: #FFF1;
+	border: 1px solid #FFF1;
+	box-shadow: 1px 2px 5px 0px #0004;
+	cursor: pointer;
+}
+svg-legend .legend-item.disabled {
+	opacity: 0.5;
+	text-decoration: line-through;
+}
+
+.swatch {
+	display: inline-block;
+	width: 0.75em;
+	height: 0.75em;
+	margin-right: 0.5em;
+	border-radius: 50%;
+}
+
+svg-popup:not(.active), .guide:not(.active) {
 	display: none;
 }
 	

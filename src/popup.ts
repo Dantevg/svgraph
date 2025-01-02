@@ -6,7 +6,7 @@ import Range from "./util/range"
 const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Point =>
 	(arr.map(x => [x, Math.abs(x.label.getPos(range) - to.getPos(range))]) as [Point, number][]).minBy(x => x[1])[0]
 
-export default class PopupElement extends HTMLDivElement {
+export default class PopupElement extends HTMLElement {
 	constructor() {
 		super()
 	}
@@ -18,17 +18,6 @@ export default class PopupElement extends HTMLDivElement {
 	move(x: number, y: number) {
 		this.style.left = `${x + 20}px`
 		this.style.top = `${y}px`
-	}
-
-	setValues(points: { name: string, colour: string, point: Point }[]) {
-		for (const { name, colour, point: { value } } of points) {
-			if (value != undefined && value.number != 0) this.appendChild(p({},
-				div({ class: "swatch", style: `background-color: ${colour}` }),
-				span({ class: "name" }, new Text(name)),
-				new Text(": "),
-				span({ class: "value" }, new Text(value.text)),
-			))
-		}
 	}
 
 	update(x: number, y: number, t: number, range: Range<Label>, data: { name: string, colour: string, points: Point[] }[]): Point[] {
@@ -46,6 +35,17 @@ export default class PopupElement extends HTMLDivElement {
 
 		return nearestPoints.map(x => x.point)
 	}
+
+	private setValues(points: { name: string, colour: string, point: Point }[]) {
+		for (const { name, colour, point: { value } } of points) {
+			if (value != undefined && value.number != 0) this.appendChild(p({},
+				div({ class: "swatch", style: `background-color: ${colour}` }),
+				span({ class: "name" }, new Text(name)),
+				new Text(": "),
+				span({ class: "value" }, new Text(value.text)),
+			))
+		}
+	}
 }
 
-customElements.define("svg-popup", PopupElement, { extends: "div" })
+customElements.define("svg-popup", PopupElement)
