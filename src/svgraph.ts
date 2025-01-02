@@ -335,7 +335,7 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	private handleHover(t: number, clientX: number, clientY: number, rect: DOMRect) {
-		const points = this.popupElem.update(clientX, clientY, t, this.xaxis.range, this.data)
+		const points = this.popupElem.update(clientX, clientY, t, this.xaxis.range, this.activeData)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
 			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
