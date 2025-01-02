@@ -169,9 +169,8 @@ export default class SVGraph extends HTMLElement {
 
 	selectRange(from: Label, to: Label, redraw = true) {
 		this.xaxis.range = new Range(from, to)
-		this.updateActiveData(false)
 
-		if (this.activeData.length == 0) {
+		if (!this.updateActiveData(false)) {
 			// selection has no data, reset zoom
 			this.xaxis = getAxis(this.data, "label")
 			this.updateActiveData(false)
@@ -180,8 +179,8 @@ export default class SVGraph extends HTMLElement {
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
 	}
 
-	private updateActiveData(redraw = true) {
-		this.activeData = this.data
+	private updateActiveData(redraw = true): boolean {
+		const newActiveData = this.data
 			.filter(({ name }) => !this.legendElem.disabled.has(name))
 			.map(({ name, colour, points }) => ({
 				name, colour, points: points.filter(({ label }, i, arr) =>
@@ -191,10 +190,13 @@ export default class SVGraph extends HTMLElement {
 				)
 			})).filter(({ points }) => points.length > 0)
 
-		this.xaxis = getAxis(this.activeData, "label")
+		if (newActiveData.length == 0) return false
+		this.activeData = newActiveData
+
 		this.yaxis = getAxis(this.activeData, "value")
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
+		return true
 	}
 
 	private axes(x: number, y: number, width: number, height: number): SVGElement {
