@@ -4,6 +4,7 @@ import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import Range from "./util/range"
 import LegendElement from "./legend"
+import { h1 } from "./util/html"
 
 export * from "./label"
 
@@ -16,6 +17,7 @@ export type Point = { label: Label, value: Label }
 export type Config = {
 	data: { [category: string]: Point[] }
 	styles?: Partial<Styles>
+	title?: string
 }
 
 type AxisStyle = {
@@ -75,6 +77,8 @@ export default class SVGraph extends HTMLElement {
 		const styleElem = document.createElement("style")
 		styleElem.textContent = style
 		shadow.appendChild(styleElem)
+
+		if (config.title != undefined) shadow.appendChild(h1({ class: "title" }, new Text(config.title)))
 
 		this.legendElem = new LegendElement(() => this.updateActiveData())
 		shadow.appendChild(this.legendElem)
@@ -375,6 +379,12 @@ export function nearestLabel(t: number, range: Range<Label>, data: { name: strin
 }
 
 const style = `
+h1 {
+	margin: 0 0 0.5em 0;
+	font-size: 1.5em;
+	text-align: center;
+}
+
 svg-popup {
 	position: absolute;
 	padding: 0.5em 0.6em;
@@ -411,6 +421,7 @@ svg-legend .legend-item:hover {
 	background: #FFF1;
 	border: 1px solid #FFF1;
 	box-shadow: 1px 2px 5px 0px #0004;
+	backdrop-filter: blur(20px);
 	cursor: pointer;
 }
 svg-legend .legend-item.disabled {
