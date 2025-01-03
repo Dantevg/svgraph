@@ -94,14 +94,15 @@ export default class SVGraph extends HTMLElement {
 		shadow.appendChild(this.popupElem)
 
 		this.resizeObserver = new ResizeObserver((entries) => {
-			this.draw(entries[0].contentBoxSize[0].inlineSize, entries[0].contentBoxSize[0].blockSize)
+			const { inlineSize: width, blockSize: height } = entries[0].contentBoxSize[0]
+			if (width > 0 && height > 0) this.draw(width, height)
 		})
 		this.resizeObserver.observe(this.svgElem, { box: "content-box" })
 
 		this.update(config, false)
 	}
 
-	update({ data, styles }: Config, redraw = true) {
+	update({ data, title, styles }: Config, redraw = true) {
 		this.styles = {
 			colourscheme: styles?.colourscheme ?? ["black"],
 			xAxis: {
@@ -149,6 +150,8 @@ export default class SVGraph extends HTMLElement {
 		this.xaxis = getAxis(this.data, "label")
 		this.yaxis = getAxis(this.data, "value")
 		this.legendElem.update(this.data)
+		
+		// TODO: update title
 
 		this.updateActiveData(redraw)
 	}

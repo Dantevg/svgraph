@@ -13,14 +13,14 @@ function datesBetween(from: Date, to: Date, inclusive: boolean): Date[] {
 	return dates
 }
 
-function getDatasetForPlayer(data: StatData, dates: string[], player: string, stat: string): { label: Label, value: Label }[] {
+function getDatasetForPlayer(data: StatData, lastDate: number, player: string, stat: string): { label: Label, value: Label }[] {
 	const linedata = data.filter(row => row.Player == player)
 		.map(row => ({
 			label: new DateLabel(new Date(row.Date)),
 			value: new TimeLabel(Number(row[stat]) / 20),
 		}))
 		.flatMap((row, i, rows) => {
-			const dayBeforeNext = new Date(rows[i + 1]?.label?.value ?? dates.at(-1))
+			const dayBeforeNext = new Date(rows[i + 1]?.label?.value ?? lastDate)
 			dayBeforeNext.setUTCDate(dayBeforeNext.getUTCDate() - 1)
 			if (dayBeforeNext.valueOf() == row.label.value.valueOf()) return [row]
 			else return [row, { label: new DateLabel(dayBeforeNext), value: row.value }]
@@ -37,14 +37,10 @@ function getDatasetForPlayer(data: StatData, dates: string[], player: string, st
 }
 
 export async function getData(column: string) {
-	const data = parse(await (await fetch("./stats.csv")).text(), { columns: true })
+	const data: any[] = parse(await (await fetch("./stats.csv")).text(), { columns: true })
 	const players: Set<string> = new Set(data.map(row => row.Player))
-	const [minDate, maxDate] = data.map(row => new Date(row.Date).valueOf())
-		.reduce(
-			([min, max], date) => [Math.min(min, date), Math.max(max, date)],
-			[Infinity, -Infinity])
-	const dates = datesBetween(new Date(minDate), new Date(maxDate), true)
-		.map(date => date.toISOString().split("T")[0])
+	const maxDate = data.map(row => new Date(row.Date).valueOf())
+		.reduce((max, date) => Math.max(max, date), -Infinity)
 
-	return Object.fromEntries([...players].map(player => [player, getDatasetForPlayer(data, dates, player, column)]))
+	return Object.fromEntries([...players].map(player => [player, getDatasetForPlayer(data, maxDate, player, column)]))
 }
