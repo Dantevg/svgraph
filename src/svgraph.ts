@@ -8,10 +8,6 @@ import { h1 } from "./util/html"
 
 export * from "./label"
 
-// TODO: remove these re-exports in release, only for testing
-export { getData } from "./data"
-export * from "./util/colourschemes"
-
 export type Point = { label: Label, value: Label }
 
 export type Config = {
@@ -150,7 +146,7 @@ export default class SVGraph extends HTMLElement {
 		this.xaxis = getAxis(this.data, "label")
 		this.yaxis = getAxis(this.data, "value")
 		this.legendElem.update(this.data)
-		
+
 		// TODO: update title
 
 		this.updateActiveData(redraw)
