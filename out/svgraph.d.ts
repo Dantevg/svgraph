@@ -129,6 +129,7 @@ declare class LegendElement extends HTMLElement {
 type DeepPartial<T> = T extends object ? {
     [P in keyof T]?: DeepPartial<T[P]>;
 } : T;
+
 type Point = {
     label: Label;
     value: Label;
@@ -215,15 +216,5 @@ declare function nearestLabel(t: number, range: Range<Label>, data: {
     name: string;
     points: Point[];
 }[]): Label;
-declare global {
-    interface Array<T> {
-        max(): T;
-        maxBy(fn: (x: T) => number): T;
-        maxByKey(key: string): T;
-        min(): T;
-        minBy(fn: (x: T) => number): T;
-        minByKey(key: string): T;
-    }
-}
 
-export { type Config, DateLabel, type DeepPartial, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default, nearestLabel };
+export { type Config, DateLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default, nearestLabel };

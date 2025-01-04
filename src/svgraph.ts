@@ -5,12 +5,9 @@ import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import Range from "./util/range"
 import LegendElement from "./legend"
 import { h1 } from "./util/html"
+import { DeepPartial, maxBy, maxByKey, minBy, minByKey } from "./util/util"
 
 export * from "./label"
-
-export type DeepPartial<T> = T extends object
-	? { [P in keyof T]?: DeepPartial<T[P]> }
-	: T
 
 export type Point = { label: Label, value: Label }
 
@@ -365,22 +362,22 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
-function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: string): Axis<L> {
+function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: keyof Point): Axis<L> {
 	const range = new Range(
-		data.map(({ points }) => points.minBy(p => p[key].number)[key]).minByKey("number"),
-		data.map(({ points }) => points.maxBy(p => p[key].number)[key]).maxByKey("number"),
+		minByKey(data.map(({ points }) => minBy(points, p => p[key].number)[key]), "number"),
+		maxByKey(data.map(({ points }) => maxBy(points, p => p[key].number)[key]), "number"),
 	)
 
 	return new range.min.axisType(range)
 }
 
 const nearestIdx = (arr: number[], to: number): number =>
-	arr.map((x, idx) => [Math.abs(x - to), idx]).minBy(x => x[0])[1]
+	minByKey(arr.map((x, idx) => [Math.abs(x - to), idx]), 0)[1]
 
 export function nearestLabel(t: number, range: Range<Label>, data: { name: string, points: Point[] }[]) {
 	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(range)), t))
 	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
-	return nearestLabels.minBy(l => Math.abs(l.getPos(range) - t))
+	return minBy(nearestLabels, l => Math.abs(l.getPos(range) - t))
 }
 
 const style = `
@@ -449,22 +446,3 @@ svg-popup:not(.active), .guide:not(.active) {
 .xaxis text, .yaxis text {
 	transform-box: fill-box;
 }`
-
-declare global {
-	interface Array<T> {
-		max(): T
-		maxBy(fn: (x: T) => number): T
-		maxByKey(key: string): T
-		min(): T
-		minBy(fn: (x: T) => number): T
-		minByKey(key: string): T
-	}
-}
-
-Array.prototype.max = function () { return this.reduce((a, b) => Math.max(a, b), 0) }
-Array.prototype.maxBy = function <T>(fn: (x: T) => number) { return this.reduce((a, b) => fn(a) > fn(b) ? a : b) }
-Array.prototype.maxByKey = function (key: string) { return this.reduce((a, b) => a[key] > b[key] ? a : b) }
-
-Array.prototype.min = function () { return this.reduce((a, b) => Math.min(a, b), 0) }
-Array.prototype.minBy = function <T>(fn: (x: T) => number) { return this.reduce((a, b) => fn(a) < fn(b) ? a : b) }
-Array.prototype.minByKey = function (key: string) { return this.reduce((a, b) => a[key] < b[key] ? a : b) }

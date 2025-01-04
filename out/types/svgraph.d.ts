@@ -3,10 +3,8 @@ import { Label } from "./label";
 import PopupElement from "./popup";
 import Range from "./util/range";
 import LegendElement from "./legend";
+import { DeepPartial } from "./util/util";
 export * from "./label";
-export type DeepPartial<T> = T extends object ? {
-    [P in keyof T]?: DeepPartial<T[P]>;
-} : T;
 export type Point = {
     label: Label;
     value: Label;
@@ -93,13 +91,3 @@ export declare function nearestLabel(t: number, range: Range<Label>, data: {
     name: string;
     points: Point[];
 }[]): Label;
-declare global {
-    interface Array<T> {
-        max(): T;
-        maxBy(fn: (x: T) => number): T;
-        maxByKey(key: string): T;
-        min(): T;
-        minBy(fn: (x: T) => number): T;
-        minByKey(key: string): T;
-    }
-}
