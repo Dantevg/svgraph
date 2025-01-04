@@ -16,6 +16,7 @@ export default class LegendElement extends HTMLElement {
 				div({ class: "swatch", style: `background-color: ${colour}` }),
 				span({ class: "name" }, new Text(name)),
 			)
+			legendItem.classList.toggle("disabled", this.disabled.has(name))
 			this.appendChild(legendItem)
 			legendItem.addEventListener("click", () => this.onLegendItemClick(name, legendItem))
 		}

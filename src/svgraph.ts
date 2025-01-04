@@ -74,7 +74,7 @@ export default class SVGraph extends HTMLElement {
 		styleElem.textContent = style
 		shadow.appendChild(styleElem)
 
-		shadow.appendChild(h1({ id: "title" }, new Text(config.title ?? "")))
+		shadow.appendChild(h1({ id: "title" }))
 
 		this.legendElem = new LegendElement(() => this.updateActiveData())
 		shadow.appendChild(this.legendElem)
