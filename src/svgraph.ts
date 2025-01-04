@@ -74,7 +74,7 @@ export default class SVGraph extends HTMLElement {
 		styleElem.textContent = style
 		shadow.appendChild(styleElem)
 
-		if (config.title != undefined) shadow.appendChild(h1({ class: "title" }, new Text(config.title)))
+		shadow.appendChild(h1({ id: "title" }, new Text(config.title ?? "")))
 
 		this.legendElem = new LegendElement(() => this.updateActiveData())
 		shadow.appendChild(this.legendElem)
@@ -150,7 +150,7 @@ export default class SVGraph extends HTMLElement {
 		this.yaxis = getAxis(this.data, "value")
 		this.legendElem.update(this.data)
 
-		// TODO: update title
+		this.shadowRoot.getElementById("title").textContent = title
 
 		this.updateActiveData(redraw)
 	}
@@ -389,6 +389,9 @@ h1 {
 	font-size: 1.5em;
 	text-align: center;
 }
+h1:empty {
+	display: none;
+}
 
 svg-popup {
 	position: absolute;
@@ -417,7 +420,7 @@ svg-legend {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	margin: 5px 10px;
+	margin: 5px;
 }
 svg-legend .legend-item {
 	padding: 0.25em 0.6em;
