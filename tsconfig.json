@@ -7,8 +7,8 @@
 		"inlineSources": true,
 		"moduleResolution": "node",
 		"outDir": "out",
-		"jsx": "react-jsx",
-		"jsxImportSource": "@itsjavi",
+		"declaration": true,
+		"declarationDir": "out/types",
 	},
 	"include": ["src"],
 	"exclude": [

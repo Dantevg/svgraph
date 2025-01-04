@@ -8,11 +8,15 @@ import { h1 } from "./util/html"
 
 export * from "./label"
 
+export type DeepPartial<T> = T extends object
+	? { [P in keyof T]?: DeepPartial<T[P]> }
+	: T
+
 export type Point = { label: Label, value: Label }
 
 export type Config = {
 	data: { [category: string]: Point[] }
-	styles?: Partial<Styles>
+	styles?: DeepPartial<Styles>
 	title?: string
 }
 
