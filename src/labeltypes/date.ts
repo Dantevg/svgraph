@@ -26,6 +26,8 @@ export class DateAxis implements Axis<DateLabel> {
 
 		const interval = Math.ceil(span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.floor(span / interval) + 1).keys().map(x => new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range.min.number)))]
+		return [...Array(Math.floor(span / interval) + 1).keys().map(x =>
+			new DateLabel(new Date(x * interval * 24 * 60 * 60 * 1000 + this.range.min.number))
+		)]
 	}
 }

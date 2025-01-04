@@ -39,6 +39,8 @@ export class TimeAxis implements Axis<TimeLabel> {
 
 		const interval = Math.ceil(this.range.span / unitOffset / n) * unitOffset
 
-		return [...Array(Math.floor(this.range.span / interval) + 1).keys().map(x => new TimeLabel(x * interval + this.range.min.number))]
+		return [...Array(Math.floor(this.range.span / interval) + 1).keys().map(x =>
+			new TimeLabel(x * interval + this.range.min.number)
+		)]
 	}
 }

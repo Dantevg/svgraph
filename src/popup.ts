@@ -28,7 +28,7 @@ export default class PopupElement extends HTMLElement {
 		const label = nearestLabel(t, range, data)
 
 		this.innerHTML = ""
-		this.appendChild(h3({}, new Text(label.text)))
+		this.appendChild(h3({}, new Text(label?.text)))
 
 		const nearestPoints = data.map(({ name, colour, points }) => ({ name, colour, point: nearestPointForLabel(points, label, range) }))
 		this.setValues(nearestPoints)

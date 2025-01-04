@@ -44,6 +44,20 @@ declare class NumberAxis implements Axis<NumberLabel> {
     getTicks(n: number): NumberLabel[];
 }
 
+declare class IntegerLabel implements Label {
+    value: number;
+    constructor(value: number);
+    get text(): string;
+    get number(): number;
+    get axisType(): typeof IntegerAxis;
+    getPos: (range: Range<Label>) => number;
+}
+declare class IntegerAxis implements Axis<IntegerLabel> {
+    range: Range<IntegerLabel>;
+    constructor(range: Range<IntegerLabel>);
+    getTicks(n: number): IntegerLabel[];
+}
+
 declare class DateLabel implements Label {
     value: Date;
     constructor(value: Date);
@@ -217,4 +231,4 @@ declare class SVGraph extends HTMLElement {
     private isWithinGraphArea;
 }
 
-export { type Config, DateLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };
+export { type Config, DateLabel, IntegerLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };

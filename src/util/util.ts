@@ -12,6 +12,8 @@ export const maxByKey = <T>(arr: T[], key: keyof T): T => (arr.length > 0) ? arr
 export const minBy = <T>(arr: T[], fn: (x: T) => number): T => (arr.length > 0) ? arr.reduce((a, b) => fn(a) < fn(b) ? a : b) : undefined
 export const minByKey = <T>(arr: T[], key: keyof T): T => (arr.length > 0) ? arr.reduce((a, b) => a[key] < b[key] ? a : b) : undefined
 
+export const floorTo = (n: number, to: number) => Math.floor(n / to) * to
+
 const nearestIdx = (arr: number[], to: number): number =>
 	minByKey(arr.map((x, idx) => [Math.abs(x - to), idx]), 0)[1]
 

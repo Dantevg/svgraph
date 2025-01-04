@@ -2,11 +2,11 @@ import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import { h1 } from "./util/html"
 import Range from "./util/range"
 import { DeepPartial, maxBy, maxByKey, minBy, minByKey, nearestLabel } from "./util/util"
-import { Label, Axis } from "./label"
+import { Label, Axis, NumberAxis, NumberLabel, EmptyAxis } from "./label"
 import PopupElement from "./popup"
 import LegendElement from "./legend"
 
-export { Label, NumberLabel, DateLabel, TimeLabel, MetricLabel } from "./label"
+export { Label, NumberLabel, IntegerLabel, DateLabel, TimeLabel, MetricLabel } from "./label"
 
 export type Point = { label: Label, value: Label }
 
@@ -143,7 +143,7 @@ export default class SVGraph extends HTMLElement {
 		}
 
 		this.data = Object.entries(data)
-			.sort((a, b) => b[1].at(-1).value.number - a[1].at(-1).value.number)
+			.sort((a, b) => (b[1].at(-1)?.value?.number ?? 0) - (a[1].at(-1)?.value?.number ?? 0))
 			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
 
 		this.xaxis = getAxis(this.data, "label")
@@ -171,8 +171,9 @@ export default class SVGraph extends HTMLElement {
 
 	selectRange(from: Label, to: Label, redraw = true) {
 		this.xaxis.range = new Range(from, to)
+		this.updateActiveData(false)
 
-		if (!this.updateActiveData(false)) {
+		if (this.activeData.length == 0) {
 			// selection has no data, reset zoom
 			this.xaxis = getAxis(this.data, "label")
 			this.updateActiveData(false)
@@ -181,7 +182,7 @@ export default class SVGraph extends HTMLElement {
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
 	}
 
-	private updateActiveData(redraw = true): boolean {
+	private updateActiveData(redraw = true) {
 		const newActiveData = this.data
 			.filter(({ name }) => !this.legendElem.disabled.has(name))
 			.map(({ name, colour, points }) => ({
@@ -192,13 +193,11 @@ export default class SVGraph extends HTMLElement {
 				)
 			})).filter(({ points }) => points.length > 0)
 
-		if (newActiveData.length == 0) return false
 		this.activeData = newActiveData
 
 		this.yaxis = getAxis(this.activeData, "value")
 
 		if (redraw) this.draw(this.svgElem.clientWidth, this.svgElem.clientHeight)
-		return true
 	}
 
 	private axes(x: number, y: number, width: number, height: number): SVGElement {
@@ -365,10 +364,13 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
-function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: keyof Point): Axis<L> {
+function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: keyof Point): Axis<L> | EmptyAxis {
+	const dataFiltered = data.filter(({ points }) => points.length > 0)
+	if (dataFiltered.length == 0) return new EmptyAxis()
+
 	const range = new Range(
-		minByKey(data.map(({ points }) => minBy(points, p => p[key].number)[key]), "number"),
-		maxByKey(data.map(({ points }) => maxBy(points, p => p[key].number)[key]), "number"),
+		minByKey(dataFiltered.map(({ points }) => minBy(points, p => p[key].number)?.[key]), "number"),
+		maxByKey(dataFiltered.map(({ points }) => maxBy(points, p => p[key].number)?.[key]), "number"),
 	)
 
 	return new range.min.axisType(range)

@@ -10,6 +10,8 @@ export interface Axis<L extends Label> {
     getTicks(n: number): L[];
 }
 export * from "./labeltypes/number";
+export * from "./labeltypes/integer";
 export * from "./labeltypes/date";
 export * from "./labeltypes/time";
 export * from "./labeltypes/metric";
+export * from "./labeltypes/empty";

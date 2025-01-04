@@ -13,6 +13,8 @@ export interface Axis<L extends Label> {
 }
 
 export * from "./labeltypes/number"
+export * from "./labeltypes/integer"
 export * from "./labeltypes/date"
 export * from "./labeltypes/time"
 export * from "./labeltypes/metric"
+export * from "./labeltypes/empty"
