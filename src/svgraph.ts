@@ -372,6 +372,12 @@ function getAxis<L extends Label>(data: { name: string, colour: string, points: 
 }
 
 const style = `
+:host {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
 h1 {
 	margin: 0 0 0.5em 0;
 	font-size: 1.5em;
@@ -381,6 +387,7 @@ h1 {
 svg-popup {
 	position: absolute;
 	padding: 0.5em 0.6em;
+	white-space: nowrap;
 	background: #2228;
 	border: 1px solid #FFF1;
 	border-radius: 10px;
@@ -403,7 +410,7 @@ svg-legend {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: center;
-	padding: 5px 10px;
+	margin: 5px 10px;
 }
 svg-legend .legend-item {
 	padding: 0.25em 0.6em;
