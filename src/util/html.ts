@@ -11,6 +11,7 @@ type DefaultAttrs = {
 	id?: string
 	class?: string
 	style?: string
+	hidden?: string
 	[_: `data-${string}`]: string
 }
 

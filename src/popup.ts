@@ -10,11 +10,12 @@ const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Poi
 export default class PopupElement extends HTMLElement {
 	constructor() {
 		super()
+		this.setAttribute("hidden", "")
 	}
 
-	show() { this.classList.add("active") }
+	show() { this.removeAttribute("hidden") }
 
-	hide() { this.classList.remove("active") }
+	hide() { this.setAttribute("hidden", "") }
 
 	move(x: number, y: number) {
 		this.style.left = `${x + 20}px`

@@ -89,13 +89,16 @@ export default class SVGraph extends HTMLElement {
 		this.popupElem = new PopupElement()
 		shadow.appendChild(this.popupElem)
 
+		this.update(config, false)
+	}
+
+	// Callback for when the element is added to the DOM
+	private connectedCallback() {
 		this.resizeObserver = new ResizeObserver((entries) => {
 			const { inlineSize: width, blockSize: height } = entries[0].contentBoxSize[0]
 			if (width > 0 && height > 0) this.draw(width, height)
 		})
 		this.resizeObserver.observe(this.svgElem, { box: "content-box" })
-
-		this.update(config, false)
 	}
 
 	update({ data, title, styles }: Config, redraw = true) {
@@ -276,7 +279,7 @@ export default class SVGraph extends HTMLElement {
 		rect({ class: "selection-overlay", x: x, y: y, width: 0, height: height, fill: "#46A4" })
 
 	private guide = (height: number): SVGElement =>
-		g({ class: "guide", transform: `translate(${this.styles.yAxis.width}, 0)` },
+		g({ class: "guide", transform: `translate(${this.styles.yAxis.width}, 0)`, visibility: "hidden" },
 			line({ class: "guideline", from: [0, 0], to: [0, height], stroke: this.styles.guideline.stroke, "stroke-width": this.styles.guideline.width }),
 			...this.activeData.map(() => circle({ class: "guide-point", cx: 0, cy: 0, r: this.styles.guideline.points.r, fill: this.styles.guideline.points.fill })),
 		)
@@ -309,13 +312,13 @@ export default class SVGraph extends HTMLElement {
 			this.handleHover(t, event.clientX - shadowRect.left, event.clientY - shadowRect.top, svgRect)
 		} else {
 			this.popupElem.hide()
-			this.guideElem.classList.remove("active")
+			this.guideElem.setAttribute("visibility", "hidden")
 		}
 	}
 
 	private onMouseLeave(event: MouseEvent) {
 		this.popupElem.hide()
-		this.guideElem.classList.remove("active")
+		this.guideElem.setAttribute("visibility", "hidden")
 	}
 
 	private handleSelection(t: number, buttons: number) {
@@ -342,7 +345,7 @@ export default class SVGraph extends HTMLElement {
 		})
 
 		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
-		this.guideElem.classList.add("active")
+		this.guideElem.removeAttribute("visibility")
 	}
 
 	private isWithinGraphArea(x: number, y: number): boolean {
@@ -377,6 +380,9 @@ const style = `
 	flex-direction: column;
 	height: 100%;
 }
+:host([hidden]) {
+	display: none;
+}
 
 h1 {
 	margin: 0 0 0.5em 0;
@@ -393,6 +399,7 @@ svg-popup {
 	border-radius: 10px;
 	box-shadow: 1px 2px 20px 0px #0008;
 	backdrop-filter: blur(20px);
+	pointer-events: none; // prevent fast mouse movements from triggering mouseleave on svg
 }
 svg-popup h3 {
 	margin: 0 0 0.6em 0;
@@ -435,10 +442,6 @@ svg-legend .legend-item.disabled {
 	height: 0.75em;
 	margin-right: 0.5em;
 	border-radius: 50%;
-}
-
-svg-popup:not(.active), .guide:not(.active) {
-	display: none;
 }
 	
 .xaxis text, .yaxis text {

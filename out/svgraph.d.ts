@@ -196,6 +196,7 @@ declare class SVGraph extends HTMLElement {
     private activeData;
     get canvasCoordRange(): Range<number>;
     constructor(config: Config);
+    private connectedCallback;
     update({ data, title, styles }: Config, redraw?: boolean): void;
     draw(width: number, height: number): void;
     selectRange(from: Label, to: Label, redraw?: boolean): void;

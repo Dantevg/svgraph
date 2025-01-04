@@ -8,6 +8,7 @@ type DefaultAttrs = {
     stroke?: string;
     "stroke-width"?: stringable;
     "font-size"?: stringable;
+    visibility?: "visible" | "hidden";
     [_: `data-${string}`]: string;
 };
 export declare const svg: (attrs: {
