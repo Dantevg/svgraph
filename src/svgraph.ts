@@ -300,12 +300,13 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	private onMouseMove(event: MouseEvent) {
-		const rect = this.svgElem.getBoundingClientRect()
-		const t = this.canvasCoordRange.normalize(event.clientX - rect.left)
+		const svgRect = this.svgElem.getBoundingClientRect()
+		const shadowRect = this.shadowRoot.host.getBoundingClientRect()
+		const t = this.canvasCoordRange.normalize(event.clientX - svgRect.left)
 
 		if (this.isWithinGraphArea(event.clientX, event.clientY)) {
 			this.handleSelection(t, event.buttons)
-			this.handleHover(t, event.clientX, event.clientY, rect)
+			this.handleHover(t, event.clientX - shadowRect.left, event.clientY - shadowRect.top, svgRect)
 		} else {
 			this.popupElem.hide()
 			this.guideElem.classList.remove("active")
@@ -333,21 +334,21 @@ export default class SVGraph extends HTMLElement {
 		}
 	}
 
-	private handleHover(t: number, clientX: number, clientY: number, rect: DOMRect) {
-		const points = this.popupElem.update(clientX, clientY, t, this.xaxis.range, this.activeData)
+	private handleHover(t: number, x: number, y: number, rect: DOMRect) {
+		const points = this.popupElem.update(x, y, t, this.xaxis.range, this.activeData)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
 			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
 		})
 
-		this.guideElem.setAttribute("transform", `translate(${clientX - rect.left}, 0)`)
+		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
 		this.guideElem.classList.add("active")
 	}
 
-	private isWithinGraphArea(clientX: number, clientY: number): boolean {
+	private isWithinGraphArea(x: number, y: number): boolean {
 		const rect = this.svgElem.getBoundingClientRect()
-		return new Range(rect.left + this.styles.yAxis.width, rect.right).contains(clientX)
-			&& new Range(rect.top, rect.bottom - this.styles.xAxis.height).contains(clientY)
+		return new Range(rect.left + this.styles.yAxis.width, rect.right).contains(x)
+			&& new Range(rect.top, rect.bottom - this.styles.xAxis.height).contains(y)
 	}
 }
 
