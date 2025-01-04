@@ -1,10 +1,9 @@
-import { Axis } from "./axis";
-import { Label } from "./label";
-import PopupElement from "./popup";
 import Range from "./util/range";
-import LegendElement from "./legend";
 import { DeepPartial } from "./util/util";
-export * from "./label";
+import { Label, Axis } from "./label";
+import PopupElement from "./popup";
+import LegendElement from "./legend";
+export { Label, NumberLabel, DateLabel, TimeLabel, MetricLabel } from "./label";
 export type Point = {
     label: Label;
     value: Label;
@@ -87,7 +86,3 @@ export default class SVGraph extends HTMLElement {
     private handleHover;
     private isWithinGraphArea;
 }
-export declare function nearestLabel(t: number, range: Range<Label>, data: {
-    name: string;
-    points: Point[];
-}[]): Label;

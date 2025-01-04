@@ -1,6 +1,6 @@
-import { Label } from "./label";
-import { Point } from "./svgraph";
 import Range from "./util/range";
+import { Point } from "./svgraph";
+import { Label } from "./label";
 export default class PopupElement extends HTMLElement {
     constructor();
     show(): void;

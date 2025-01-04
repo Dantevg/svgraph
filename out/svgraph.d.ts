@@ -30,12 +30,6 @@ declare class Range<T extends number | {
     lerp: (t: number) => number;
 }
 
-interface Label {
-    get text(): string;
-    get number(): number;
-    get axisType(): any;
-    getPos(range: Range<Label>): number;
-}
 declare class NumberLabel implements Label {
     value: number;
     constructor(value: number);
@@ -44,6 +38,12 @@ declare class NumberLabel implements Label {
     get axisType(): typeof NumberAxis;
     getPos: (range: Range<Label>) => number;
 }
+declare class NumberAxis implements Axis<NumberLabel> {
+    range: Range<NumberLabel>;
+    constructor(range: Range<NumberLabel>);
+    getTicks(n: number): NumberLabel[];
+}
+
 declare class DateLabel implements Label {
     value: Date;
     constructor(value: Date);
@@ -52,6 +52,12 @@ declare class DateLabel implements Label {
     get axisType(): typeof DateAxis;
     getPos: (range: Range<Label>) => number;
 }
+declare class DateAxis implements Axis<DateLabel> {
+    range: Range<DateLabel>;
+    constructor(range: Range<DateLabel>);
+    getTicks(n: number): DateLabel[];
+}
+
 declare class TimeLabel implements Label {
     value: number;
     constructor(value: number);
@@ -60,6 +66,12 @@ declare class TimeLabel implements Label {
     get axisType(): typeof TimeAxis;
     getPos: (range: Range<Label>) => number;
 }
+declare class TimeAxis implements Axis<TimeLabel> {
+    range: Range<TimeLabel>;
+    constructor(range: Range<TimeLabel>);
+    getTicks(n: number): TimeLabel[];
+}
+
 declare class MetricLabel implements Label {
     value: number;
     unit: string;
@@ -72,31 +84,26 @@ declare class MetricLabel implements Label {
     static unitsStartOffset: number;
     static largestOffset: (value: number) => number;
 }
-
-interface Axis<L extends Label> {
-    range: Range<L>;
-    getTicks(n: number): L[];
-}
-declare class NumberAxis implements Axis<NumberLabel> {
-    range: Range<NumberLabel>;
-    constructor(range: Range<NumberLabel>);
-    getTicks(n: number): NumberLabel[];
-}
-declare class DateAxis implements Axis<DateLabel> {
-    range: Range<DateLabel>;
-    constructor(range: Range<DateLabel>);
-    getTicks(n: number): DateLabel[];
-}
-declare class TimeAxis implements Axis<TimeLabel> {
-    range: Range<TimeLabel>;
-    constructor(range: Range<TimeLabel>);
-    getTicks(n: number): TimeLabel[];
-}
 declare class MetricAxis implements Axis<MetricLabel> {
     range: Range<MetricLabel>;
     constructor(range: Range<MetricLabel>);
     getTicks: (n: number) => MetricLabel[];
 }
+
+interface Label {
+    get text(): string;
+    get number(): number;
+    get axisType(): any;
+    getPos(range: Range<Label>): number;
+}
+interface Axis<L extends Label> {
+    range: Range<L>;
+    getTicks(n: number): L[];
+}
+
+type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
 
 declare class PopupElement extends HTMLElement {
     constructor();
@@ -125,10 +132,6 @@ declare class LegendElement extends HTMLElement {
     }[]): void;
     private onLegendItemClick;
 }
-
-type DeepPartial<T> = T extends object ? {
-    [P in keyof T]?: DeepPartial<T[P]>;
-} : T;
 
 type Point = {
     label: Label;
@@ -212,9 +215,5 @@ declare class SVGraph extends HTMLElement {
     private handleHover;
     private isWithinGraphArea;
 }
-declare function nearestLabel(t: number, range: Range<Label>, data: {
-    name: string;
-    points: Point[];
-}[]): Label;
 
-export { type Config, DateLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default, nearestLabel };
+export { type Config, DateLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };

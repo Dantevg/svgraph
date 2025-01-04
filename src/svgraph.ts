@@ -1,13 +1,12 @@
-import { Axis } from "./axis"
-import { Label } from "./label"
-import PopupElement from "./popup"
 import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
-import Range from "./util/range"
-import LegendElement from "./legend"
 import { h1 } from "./util/html"
-import { DeepPartial, maxBy, maxByKey, minBy, minByKey } from "./util/util"
+import Range from "./util/range"
+import { DeepPartial, maxBy, maxByKey, minBy, minByKey, nearestLabel } from "./util/util"
+import { Label, Axis } from "./label"
+import PopupElement from "./popup"
+import LegendElement from "./legend"
 
-export * from "./label"
+export { Label, NumberLabel, DateLabel, TimeLabel, MetricLabel } from "./label"
 
 export type Point = { label: Label, value: Label }
 
@@ -369,15 +368,6 @@ function getAxis<L extends Label>(data: { name: string, colour: string, points: 
 	)
 
 	return new range.min.axisType(range)
-}
-
-const nearestIdx = (arr: number[], to: number): number =>
-	minByKey(arr.map((x, idx) => [Math.abs(x - to), idx]), 0)[1]
-
-export function nearestLabel(t: number, range: Range<Label>, data: { name: string, points: Point[] }[]) {
-	const nearestLabelsIdx = data.map(({ points }) => nearestIdx(points.map(p => p.label.getPos(range)), t))
-	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
-	return minBy(nearestLabels, l => Math.abs(l.getPos(range) - t))
 }
 
 const style = `
