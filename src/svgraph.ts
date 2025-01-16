@@ -2,11 +2,18 @@ import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import { h1 } from "./util/html"
 import Range from "./util/range"
 import { DeepPartial, maxBy, maxByKey, minBy, minByKey, nearestLabel } from "./util/util"
-import { Label, Axis, NumberAxis, NumberLabel, EmptyAxis } from "./label"
+import { Label, Axis } from "./label"
 import PopupElement from "./popup"
 import LegendElement from "./legend"
+import { EmptyAxis, EmptyLabel } from "./labeltypes/empty"
 
-export { Label, NumberLabel, IntegerLabel, DateLabel, TimeLabel, MetricLabel } from "./label"
+export { Label } from "./label"
+export { NumberLabel } from "./labeltypes/number"
+export { IntegerLabel } from "./labeltypes/integer"
+export { DateLabel } from "./labeltypes/date"
+export { TimeLabel } from "./labeltypes/time"
+export { MetricLabel } from "./labeltypes/metric"
+export { EmptyLabel } from "./labeltypes/empty"
 
 export type Point = { label: Label, value: Label }
 
@@ -143,7 +150,7 @@ export default class SVGraph extends HTMLElement {
 		}
 
 		this.data = Object.entries(data)
-			.sort((a, b) => (b[1].at(-1)?.value?.number ?? 0) - (a[1].at(-1)?.value?.number ?? 0))
+			.sort((a, b) => (b[1].at(-1)?.value?.valueOf() ?? 0) - (a[1].at(-1)?.value?.valueOf() ?? 0))
 			.map(([name, points], i, arr) => ({ name, points, colour: getColour(this.styles.colourscheme, (i + 1) / (arr.length + 1)) }))
 
 		this.xaxis = getAxis(this.data, "label")
@@ -217,7 +224,7 @@ export default class SVGraph extends HTMLElement {
 			}),
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labels.spacing)).map(step => text({
 				class: "tick-label",
-				x: x + step.getPos(this.xaxis.range) * width,
+				x: x + this.xaxis.range.normalize(step) * width,
 				y: y + 20,
 				transform: `rotate(${this.styles.xAxis.labels.rotation})`,
 				"text-anchor": textAnchorForLabelRotation(this.styles.xAxis.labels.rotation),
@@ -238,7 +245,7 @@ export default class SVGraph extends HTMLElement {
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labels.spacing)).map(step => text({
 				class: "tick-label",
 				x: x + width - 10,
-				y: y + (1 - step.getPos(this.yaxis.range)) * height + 5,
+				y: y + (1 - this.yaxis.range.normalize(step)) * height + 5,
 				transform: `rotate(${this.styles.yAxis.labels.rotation})`,
 				"text-anchor": "end",
 				style: "transform-origin: right",
@@ -251,14 +258,14 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "grid", transform: `translate(${x}, ${y})` },
 			...this.xaxis.getTicks(Math.floor(width / this.styles.xAxis.labels.spacing)).map(step => line({
 				class: "gridline-v",
-				from: [step.getPos(this.xaxis.range) * width, 0],
-				to: [step.getPos(this.xaxis.range) * width, height],
+				from: [this.xaxis.range.normalize(step) * width, 0],
+				to: [this.xaxis.range.normalize(step) * width, height],
 				stroke: this.styles.grid.stroke
 			})),
 			...this.yaxis.getTicks(Math.floor(height / this.styles.yAxis.labels.spacing)).map(step => line({
 				class: "gridline-h",
-				from: [0, (1 - step.getPos(this.yaxis.range)) * height],
-				to: [width, (1 - step.getPos(this.yaxis.range)) * height],
+				from: [0, (1 - this.yaxis.range.normalize(step)) * height],
+				to: [width, (1 - this.yaxis.range.normalize(step)) * height],
 				stroke: this.styles.grid.stroke
 			})),
 		)
@@ -267,8 +274,8 @@ export default class SVGraph extends HTMLElement {
 		g({ class: "lines", transform: `translate(${x}, ${y})`, "stroke-width": this.styles.lines.width },
 			...this.activeData.map(({ name, colour, points: values }, i) => {
 				const points = values.map(point => [
-					Range.UNIT.clamp(point.label.getPos(this.xaxis.range)) * width,
-					Range.UNIT.clamp((1 - point.value.getPos(this.yaxis.range))) * height,
+					Range.UNIT.clamp(this.xaxis.range.normalize(point.label)) * width,
+					Range.UNIT.clamp((1 - this.yaxis.range.normalize(point.value))) * height,
 				] as [number, number])
 				return polyline({ "data-name": name, points, fill: "none", stroke: colour })
 			})
@@ -340,7 +347,7 @@ export default class SVGraph extends HTMLElement {
 		const points = this.popupElem.update(x, y, t, this.xaxis.range, this.activeData)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
-			point.setAttribute("cy", ((1 - points[i].value.getPos(this.yaxis.range)) * (rect.height - this.styles.xAxis.height)).toString())
+			point.setAttribute("cy", ((1 - this.yaxis.range.normalize(points[i].value)) * (rect.height - this.styles.xAxis.height)).toString())
 		})
 
 		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
@@ -364,13 +371,13 @@ const transformOriginForLabelRotation = (rotation: number): "left" | "center" | 
 
 const getColour = (colourscheme: string[], i: number) => colourscheme[Math.floor(i * colourscheme.length)]
 
-function getAxis<L extends Label>(data: { name: string, colour: string, points: Point[] }[], key: keyof Point): Axis<L> | EmptyAxis {
+function getAxis(data: { name: string, colour: string, points: Point[] }[], key: keyof Point): Axis<Label> {
 	const dataFiltered = data.filter(({ points }) => points.length > 0)
 	if (dataFiltered.length == 0) return new EmptyAxis()
 
 	const range = new Range(
-		minByKey(dataFiltered.map(({ points }) => minBy(points, p => p[key].number)?.[key]), "number"),
-		maxByKey(dataFiltered.map(({ points }) => maxBy(points, p => p[key].number)?.[key]), "number"),
+		minBy(dataFiltered.map(({ points }) => minBy(points, p => p[key].valueOf())?.[key]), l => l.valueOf()),
+		maxBy(dataFiltered.map(({ points }) => maxBy(points, p => p[key].valueOf())?.[key]), l => l.valueOf()),
 	)
 
 	return new range.min.axisType(range)

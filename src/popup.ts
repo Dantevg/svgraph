@@ -5,7 +5,7 @@ import { Point } from "./svgraph"
 import { Label } from "./label"
 
 const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Point =>
-	minByKey(arr.map(x => [x, Math.abs(x.label.getPos(range) - to.getPos(range))]) as [Point, number][], 1)[0]
+	minByKey(arr.map(x => [x, Math.abs(range.normalize(x.label) - range.normalize(to))]) as [Point, number][], 1)[0]
 
 export default class PopupElement extends HTMLElement {
 	constructor() {
@@ -40,7 +40,7 @@ export default class PopupElement extends HTMLElement {
 
 	private setValues(points: { name: string, colour: string, point: Point }[]) {
 		for (const { name, colour, point: { value } } of points) {
-			if (value != undefined && value.number != 0) this.appendChild(p({},
+			if (value != undefined && value.valueOf() != 0) this.appendChild(p({},
 				div({ class: "swatch", style: `background-color: ${colour}` }),
 				span({ class: "name" }, new Text(name)),
 				new Text(": "),

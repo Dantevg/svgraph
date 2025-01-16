@@ -1,14 +1,14 @@
 import { Axis, Label } from "../label";
 import Range from "../util/range";
-export declare class EmptyLabel implements Label {
+import { Value } from "../util/util";
+export declare class EmptyLabel extends Label {
+    value: Value;
     constructor();
     get text(): string;
-    get number(): number;
     get axisType(): typeof EmptyAxis;
-    getPos: (_range: Range<Label>) => number;
 }
-export declare class EmptyAxis implements Axis<EmptyLabel> {
-    range: Range<EmptyLabel>;
-    constructor();
+export declare class EmptyAxis extends Axis<EmptyLabel> {
+    static RANGE: Range<EmptyLabel>;
+    constructor(_range?: Range<Label>);
     getTicks(_n: number): EmptyLabel[];
 }

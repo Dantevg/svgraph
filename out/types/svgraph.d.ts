@@ -3,7 +3,13 @@ import { DeepPartial } from "./util/util";
 import { Label, Axis } from "./label";
 import PopupElement from "./popup";
 import LegendElement from "./legend";
-export { Label, NumberLabel, IntegerLabel, DateLabel, TimeLabel, MetricLabel } from "./label";
+export { Label } from "./label";
+export { NumberLabel } from "./labeltypes/number";
+export { IntegerLabel } from "./labeltypes/integer";
+export { DateLabel } from "./labeltypes/date";
+export { TimeLabel } from "./labeltypes/time";
+export { MetricLabel } from "./labeltypes/metric";
+export { EmptyLabel } from "./labeltypes/empty";
 export type Point = {
     label: Label;
     value: Label;

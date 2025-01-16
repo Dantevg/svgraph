@@ -1,6 +1,30 @@
-declare class Range<T extends number | {
-    number: number;
-}> {
+declare abstract class Label implements Value {
+    abstract value: Value;
+    abstract get text(): string;
+    abstract get axisType(): {
+        new (range: Range<any>): Axis<Label>;
+    };
+    valueOf(): number;
+}
+declare abstract class Axis<L extends Label> {
+    range: Range<L>;
+    constructor(range: Range<L>);
+    abstract getTicks(n: number): L[];
+}
+
+type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
+/**
+ * Any value that can be interpreted as a number.
+ *
+ * This automatically includes the native `number` type.
+ */
+type Value = {
+    valueOf(): number;
+};
+
+declare class Range<T extends Value> {
     min: T;
     max: T;
     constructor(min: T, max: T);
@@ -15,109 +39,20 @@ declare class Range<T extends number | {
     /**
      * Returns whether a value is within this range
      */
-    contains: (value: T) => boolean;
+    contains: <U extends T>(value: U) => boolean;
     /**
      * Clamps a value to this range
      */
-    clamp: (value: number) => number;
+    clamp: <U extends T>(value: U) => number;
     /**
-     * Normalizes a value in a given [min,max] range to [0,1]
+     * Normalizes a value in this range to [0,1]
      */
-    normalize: (value: number) => number;
+    normalize: <U extends T>(value: U) => number;
     /**
-     * Interpolates a `t` in [0,1] to a given [min,max] range
+     * Interpolates a `t` in [0,1] to this range
      */
     lerp: (t: number) => number;
 }
-
-declare class NumberLabel implements Label {
-    value: number;
-    constructor(value: number);
-    get text(): string;
-    get number(): number;
-    get axisType(): typeof NumberAxis;
-    getPos: (range: Range<Label>) => number;
-}
-declare class NumberAxis implements Axis<NumberLabel> {
-    range: Range<NumberLabel>;
-    constructor(range: Range<NumberLabel>);
-    getTicks(n: number): NumberLabel[];
-}
-
-declare class IntegerLabel implements Label {
-    value: number;
-    constructor(value: number);
-    get text(): string;
-    get number(): number;
-    get axisType(): typeof IntegerAxis;
-    getPos: (range: Range<Label>) => number;
-}
-declare class IntegerAxis implements Axis<IntegerLabel> {
-    range: Range<IntegerLabel>;
-    constructor(range: Range<IntegerLabel>);
-    getTicks(n: number): IntegerLabel[];
-}
-
-declare class DateLabel implements Label {
-    value: Date;
-    constructor(value: Date);
-    get text(): string;
-    get number(): number;
-    get axisType(): typeof DateAxis;
-    getPos: (range: Range<Label>) => number;
-}
-declare class DateAxis implements Axis<DateLabel> {
-    range: Range<DateLabel>;
-    constructor(range: Range<DateLabel>);
-    getTicks(n: number): DateLabel[];
-}
-
-declare class TimeLabel implements Label {
-    value: number;
-    constructor(value: number);
-    get text(): string;
-    get number(): number;
-    get axisType(): typeof TimeAxis;
-    getPos: (range: Range<Label>) => number;
-}
-declare class TimeAxis implements Axis<TimeLabel> {
-    range: Range<TimeLabel>;
-    constructor(range: Range<TimeLabel>);
-    getTicks(n: number): TimeLabel[];
-}
-
-declare class MetricLabel implements Label {
-    value: number;
-    unit: string;
-    constructor(value: number, unit: string);
-    get text(): string;
-    get number(): number;
-    get axisType(): typeof MetricAxis;
-    getPos: (range: Range<Label>) => number;
-    static units: string[];
-    static unitsStartOffset: number;
-    static largestOffset: (value: number) => number;
-}
-declare class MetricAxis implements Axis<MetricLabel> {
-    range: Range<MetricLabel>;
-    constructor(range: Range<MetricLabel>);
-    getTicks: (n: number) => MetricLabel[];
-}
-
-interface Label {
-    get text(): string;
-    get number(): number;
-    get axisType(): any;
-    getPos(range: Range<Label>): number;
-}
-interface Axis<L extends Label> {
-    range: Range<L>;
-    getTicks(n: number): L[];
-}
-
-type DeepPartial<T> = T extends object ? {
-    [P in keyof T]?: DeepPartial<T[P]>;
-} : T;
 
 declare class PopupElement extends HTMLElement {
     constructor();
@@ -145,6 +80,72 @@ declare class LegendElement extends HTMLElement {
         colour: string;
     }[]): void;
     private onLegendItemClick;
+}
+
+declare class NumberLabel extends Label {
+    value: number;
+    constructor(value: number);
+    get text(): string;
+    get axisType(): typeof NumberAxis;
+}
+declare class NumberAxis extends Axis<NumberLabel> {
+    getTicks(n: number): NumberLabel[];
+}
+
+declare class IntegerLabel extends Label {
+    value: number;
+    constructor(value: number);
+    get text(): string;
+    get axisType(): typeof IntegerAxis;
+}
+declare class IntegerAxis extends Axis<IntegerLabel> {
+    getTicks(n: number): IntegerLabel[];
+}
+
+declare class DateLabel extends Label {
+    value: Date;
+    constructor(value: Date);
+    get text(): string;
+    get axisType(): typeof DateAxis;
+}
+declare class DateAxis extends Axis<DateLabel> {
+    getTicks(n: number): DateLabel[];
+}
+
+declare class TimeLabel extends Label {
+    value: number;
+    constructor(value: number);
+    get text(): string;
+    get axisType(): typeof TimeAxis;
+}
+declare class TimeAxis extends Axis<TimeLabel> {
+    getTicks(n: number): TimeLabel[];
+}
+
+declare class MetricLabel extends Label {
+    value: number;
+    unit: string;
+    constructor(value: number, unit: string);
+    get text(): string;
+    get axisType(): typeof MetricAxis;
+    static units: string[];
+    static unitsStartOffset: number;
+    static largestOffset: (value: number) => number;
+}
+declare class MetricAxis extends Axis<MetricLabel> {
+    getTicks: (n: number) => MetricLabel[];
+}
+
+declare class EmptyLabel extends Label {
+    value: Value;
+    constructor();
+    get text(): string;
+    get axisType(): typeof EmptyAxis;
+}
+declare class EmptyAxis extends Axis<EmptyLabel> {
+    static RANGE: Range<EmptyLabel>;
+    constructor(_range?: Range<Label>);
+    getTicks(_n: number): EmptyLabel[];
 }
 
 type Point = {
@@ -231,4 +232,4 @@ declare class SVGraph extends HTMLElement {
     private isWithinGraphArea;
 }
 
-export { type Config, DateLabel, IntegerLabel, type Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };
+export { type Config, DateLabel, EmptyLabel, IntegerLabel, Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };

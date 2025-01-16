@@ -1,8 +1,7 @@
 import { Axis, Label } from "../label"
-import Range from "../util/range"
 
-export class TimeLabel implements Label {
-	constructor(public value: number) { }
+export class TimeLabel extends Label {
+	constructor(public value: number) { super() }
 
 	get text() {
 		const date = new Date(this.value * 1000)
@@ -19,15 +18,10 @@ export class TimeLabel implements Label {
 			return `${s} s`
 		}
 	}
-	get number() { return this.value }
 	get axisType() { return TimeAxis }
-
-	getPos = (range: Range<Label>) => range.normalize(this.number)
 }
 
-export class TimeAxis implements Axis<TimeLabel> {
-	constructor(public range: Range<TimeLabel>) { }
-
+export class TimeAxis extends Axis<TimeLabel> {
 	getTicks(n: number): TimeLabel[] {
 		const unitOffset = (this.range.span / 24 / 60 / 60 > n)
 			? 24 * 60 * 60 // days
@@ -40,7 +34,7 @@ export class TimeAxis implements Axis<TimeLabel> {
 		const interval = Math.ceil(this.range.span / unitOffset / n) * unitOffset
 
 		return [...Array(Math.floor(this.range.span / interval) + 1).keys().map(x =>
-			new TimeLabel(x * interval + this.range.min.number)
+			new TimeLabel(x * interval + this.range.min.valueOf())
 		)]
 	}
 }

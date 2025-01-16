@@ -1,20 +1,14 @@
 import Range from "./util/range"
+import { Value } from "./util/util"
 
-export interface Label {
-	get text(): string
-	get number(): number
-	get axisType(): any
-	getPos(range: Range<Label>): number
+export abstract class Label implements Value {
+	abstract value: Value
+	abstract get text(): string
+	abstract get axisType(): { new(range: Range<any>): Axis<Label> }
+	valueOf() { return this.value.valueOf() }
 }
 
-export interface Axis<L extends Label> {
-	range: Range<L>
-	getTicks(n: number): L[]
+export abstract class Axis<L extends Label> {
+	constructor(public range: Range<L>) { }
+	abstract getTicks(n: number): L[]
 }
-
-export * from "./labeltypes/number"
-export * from "./labeltypes/integer"
-export * from "./labeltypes/date"
-export * from "./labeltypes/time"
-export * from "./labeltypes/metric"
-export * from "./labeltypes/empty"

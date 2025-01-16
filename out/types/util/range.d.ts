@@ -1,6 +1,5 @@
-export default class Range<T extends number | {
-    number: number;
-}> {
+import { Value } from "./util";
+export default class Range<T extends Value> {
     min: T;
     max: T;
     constructor(min: T, max: T);
@@ -15,17 +14,17 @@ export default class Range<T extends number | {
     /**
      * Returns whether a value is within this range
      */
-    contains: (value: T) => boolean;
+    contains: <U extends T>(value: U) => boolean;
     /**
      * Clamps a value to this range
      */
-    clamp: (value: number) => number;
+    clamp: <U extends T>(value: U) => number;
     /**
-     * Normalizes a value in a given [min,max] range to [0,1]
+     * Normalizes a value in this range to [0,1]
      */
-    normalize: (value: number) => number;
+    normalize: <U extends T>(value: U) => number;
     /**
-     * Interpolates a `t` in [0,1] to a given [min,max] range
+     * Interpolates a `t` in [0,1] to this range
      */
     lerp: (t: number) => number;
 }

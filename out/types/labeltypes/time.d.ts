@@ -1,15 +1,10 @@
 import { Axis, Label } from "../label";
-import Range from "../util/range";
-export declare class TimeLabel implements Label {
+export declare class TimeLabel extends Label {
     value: number;
     constructor(value: number);
     get text(): string;
-    get number(): number;
     get axisType(): typeof TimeAxis;
-    getPos: (range: Range<Label>) => number;
 }
-export declare class TimeAxis implements Axis<TimeLabel> {
-    range: Range<TimeLabel>;
-    constructor(range: Range<TimeLabel>);
+export declare class TimeAxis extends Axis<TimeLabel> {
     getTicks(n: number): TimeLabel[];
 }

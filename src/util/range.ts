@@ -1,6 +1,6 @@
-const num = (n: number | { number: number }) => typeof n === "number" ? n : n.number
+import { Value } from "./util"
 
-export default class Range<T extends number | { number: number }> {
+export default class Range<T extends Value> {
 	constructor(public min: T, public max: T) { }
 
 	/**
@@ -11,25 +11,25 @@ export default class Range<T extends number | { number: number }> {
 	/**
 	 * The span of this range, i.e. `max - min`
 	 */
-	get span() { return num(this.max) - num(this.min) }
+	get span() { return this.max.valueOf() - this.min.valueOf() }
 
 	/**
 	 * Returns whether a value is within this range
 	 */
-	contains = (value: T): boolean => num(this.min) < num(value) && num(value) < num(this.max)
+	contains = <U extends T>(value: U): boolean => this.min.valueOf() < value.valueOf() && value.valueOf() < this.max.valueOf()
 
 	/**
 	 * Clamps a value to this range
 	 */
-	clamp = (value: number): number => Math.max(num(this.min), Math.min(value, num(this.max)))
+	clamp = <U extends T>(value: U): number => Math.max(this.min.valueOf(), Math.min(value.valueOf(), this.max.valueOf()))
 
 	/**
-	 * Normalizes a value in a given [min,max] range to [0,1]
+	 * Normalizes a value in this range to [0,1]
 	 */
-	normalize = (value: number): number => (value - num(this.min)) / (this.span)
+	normalize = <U extends T>(value: U): number => (this.span != 0) ? (value.valueOf() - this.min.valueOf()) / this.span : 0
 
 	/**
-	 * Interpolates a `t` in [0,1] to a given [min,max] range
+	 * Interpolates a `t` in [0,1] to this range
 	 */
-	lerp = (t: number): number => num(this.min) + t * this.span
+	lerp = (t: number): number => this.min.valueOf() + t * this.span
 }
