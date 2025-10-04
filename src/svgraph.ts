@@ -5,7 +5,8 @@ import { DeepPartial, maxBy, maxByKey, minBy, minByKey, nearestLabel } from "./u
 import { Label, Axis } from "./label"
 import PopupElement from "./popup"
 import LegendElement from "./legend"
-import { EmptyAxis, EmptyLabel } from "./labeltypes/empty"
+import { EmptyAxis } from "./labeltypes/empty"
+import style from "./style"
 
 export { Label } from "./label"
 export { NumberLabel } from "./labeltypes/number"
@@ -315,7 +316,7 @@ export default class SVGraph extends HTMLElement {
 
 		if (this.isWithinGraphArea(event.clientX, event.clientY)) {
 			this.handleSelection(t, event.buttons)
-			this.handleHover(t, event.clientX - shadowRect.left, event.clientY - shadowRect.top, svgRect)
+			this.handleHover(t, event.clientX - shadowRect.left, event.clientY - shadowRect.top, shadowRect, svgRect)
 		} else {
 			this.popupElem.hide()
 			this.guideElem.setAttribute("visibility", "hidden")
@@ -343,11 +344,11 @@ export default class SVGraph extends HTMLElement {
 		}
 	}
 
-	private handleHover(t: number, x: number, y: number, rect: DOMRect) {
-		const points = this.popupElem.update(x, y, t, this.xaxis.range, this.activeData)
+	private handleHover(t: number, x: number, y: number, shadowRect: DOMRect, svgRect: DOMRect) {
+		const points = this.popupElem.update(x, y, t, shadowRect, this.xaxis.range, this.activeData)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
-			point.setAttribute("cy", ((1 - this.yaxis.range.normalize(points[i].value)) * (rect.height - this.styles.xAxis.height)).toString())
+			point.setAttribute("cy", ((1 - this.yaxis.range.normalize(points[i].value)) * (svgRect.height - this.styles.xAxis.height)).toString())
 		})
 
 		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
@@ -382,80 +383,3 @@ function getAxis(data: { name: string, colour: string, points: Point[] }[], key:
 
 	return new range.min.axisType(range)
 }
-
-const style = `
-:host {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-}
-:host([hidden]) {
-	display: none;
-}
-
-h1 {
-	margin: 0 0 0.5em 0;
-	font-size: 1.5em;
-	text-align: center;
-}
-h1:empty {
-	display: none;
-}
-
-svg-popup {
-	position: absolute;
-	padding: 0.5em 0.6em;
-	white-space: nowrap;
-	background: #2228;
-	border: 1px solid #FFF1;
-	border-radius: 10px;
-	box-shadow: 1px 2px 20px 0px #0008;
-	backdrop-filter: blur(20px);
-	pointer-events: none; // prevent fast mouse movements from triggering mouseleave on svg
-}
-svg-popup h3 {
-	margin: 0 0 0.6em 0;
-}
-svg-popup p {
-	margin: 0.3em 0 0 0;
-}
-svg-popup .name {
-	font-family: monospace;
-	font-size: 1.2em;
-	font-weight: bold;
-}
-
-svg-legend {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	margin: 5px;
-}
-svg-legend .legend-item {
-	padding: 0.25em 0.6em;
-	border: 1px solid transparent;
-	border-radius: 1em;
-}
-svg-legend .legend-item:hover {
-	background: #FFF1;
-	border: 1px solid #FFF1;
-	box-shadow: 1px 2px 5px 0px #0004;
-	backdrop-filter: blur(20px);
-	cursor: pointer;
-}
-svg-legend .legend-item.disabled {
-	opacity: 0.5;
-	text-decoration: line-through;
-}
-
-.swatch {
-	display: inline-block;
-	width: 0.75em;
-	height: 0.75em;
-	margin-right: 0.5em;
-	border-radius: 50%;
-}
-	
-.xaxis text, .yaxis text {
-	transform-box: fill-box;
-}`

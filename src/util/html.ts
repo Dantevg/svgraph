@@ -21,3 +21,6 @@ export const span = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("
 export const h1 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h1", attrs, children)
 export const h2 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h2", attrs, children)
 export const h3 = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("h3", attrs, children)
+export const table = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("table", attrs, children)
+export const tr = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("tr", attrs, children)
+export const td = (attrs: DefaultAttrs = {}, ...children: Node[]) => element("td", attrs, children)

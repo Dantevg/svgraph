@@ -1,4 +1,4 @@
-import { div, h3, p, span } from "./util/html"
+import { div, h3, p, span, table, td, tr } from "./util/html"
 import Range from "./util/range"
 import { minByKey, nearestLabel } from "./util/util"
 import { Point } from "./svgraph"
@@ -17,13 +17,19 @@ export default class PopupElement extends HTMLElement {
 
 	hide() { this.setAttribute("hidden", "") }
 
-	move(x: number, y: number) {
-		this.style.left = `${x + 20}px`
+	move(x: number, y: number, anchor: 'left' | 'right' = 'left') {
+		this.style[anchor] = `${x + 20}px`
+		this.style[anchor == 'left' ? 'right' : 'left'] = "auto"
 		this.style.top = `${y}px`
 	}
 
-	update(x: number, y: number, t: number, range: Range<Label>, data: { name: string, colour: string, points: Point[] }[]): Point[] {
-		this.move(x, y)
+	update(x: number, y: number, t: number, rect: DOMRect, range: Range<Label>, data: { name: string, colour: string, points: Point[] }[]): Point[] {
+		if (t <= 0.5) {
+			this.move(x, y, 'left')
+		} else {
+			// Show popup to the left of the cursor if on the right half of the graph
+			this.move(rect.width - x, y, 'right')
+		}
 
 		const label = nearestLabel(t, range, data)
 
@@ -39,14 +45,17 @@ export default class PopupElement extends HTMLElement {
 	}
 
 	private setValues(points: { name: string, colour: string, point: Point }[]) {
+		let rows = []
 		for (const { name, colour, point: { value } } of points) {
-			if (value != undefined && value.valueOf() != 0) this.appendChild(p({},
-				div({ class: "swatch", style: `background-color: ${colour}` }),
-				span({ class: "name" }, new Text(name)),
-				new Text(": "),
-				span({ class: "value" }, new Text(value.text)),
+			if (value != undefined && value.valueOf() != 0) rows.push(tr({},
+				td({}, 
+					div({ class: "swatch", style: `background-color: ${colour}` }),
+					span({ class: "name" }, new Text(name)),
+				),
+				td({ class: "value" }, new Text(value.text)),
 			))
 		}
+		this.appendChild(table({}, ...rows))
 	}
 }
 
