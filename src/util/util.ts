@@ -29,3 +29,6 @@ export function nearestLabel(t: number, range: Range<Label>, data: { name: strin
 	const nearestLabels = nearestLabelsIdx.map((closestIdx, i) => data[i].points[closestIdx].label)
 	return minBy(nearestLabels, l => Math.abs(range.normalize(l) - t))
 }
+
+export const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Point =>
+	minByKey(arr.map(x => [x, Math.abs(range.normalize(x.label) - range.normalize(to))]) as [Point, number][], 1)[0]

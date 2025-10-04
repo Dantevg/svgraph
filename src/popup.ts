@@ -1,11 +1,6 @@
-import { div, h3, p, span, table, td, tr } from "./util/html"
-import Range from "./util/range"
-import { minByKey, nearestLabel } from "./util/util"
-import { Point } from "./svgraph"
+import { div, h3, span, table, td, tr } from "./util/html"
+import { Dataset, Point } from "./svgraph"
 import { Label } from "./label"
-
-const nearestPointForLabel = (arr: Point[], to: Label, range: Range<Label>): Point =>
-	minByKey(arr.map(x => [x, Math.abs(range.normalize(x.label) - range.normalize(to))]) as [Point, number][], 1)[0]
 
 export default class PopupElement extends HTMLElement {
 	constructor() {
@@ -23,7 +18,7 @@ export default class PopupElement extends HTMLElement {
 		this.style.top = `${y}px`
 	}
 
-	update(x: number, y: number, t: number, rect: DOMRect, range: Range<Label>, data: { name: string, colour: string, points: Point[] }[]): Point[] {
+	update(x: number, y: number, t: number, rect: DOMRect, label: Label, data: Dataset[], points: Point[]) {
 		if (t <= 0.5) {
 			this.move(x, y, 'left')
 		} else {
@@ -31,22 +26,16 @@ export default class PopupElement extends HTMLElement {
 			this.move(rect.width - x, y, 'right')
 		}
 
-		const label = nearestLabel(t, range, data)
-
 		this.innerHTML = ""
 		this.appendChild(h3({}, new Text(label?.text)))
-
-		const nearestPoints = data.map(({ name, colour, points }) => ({ name, colour, point: nearestPointForLabel(points, label, range) }))
-		this.setValues(nearestPoints)
+		this.setValues(data.map((d, i) => [d, points[i]]))
 
 		this.show()
-
-		return nearestPoints.map(x => x.point)
 	}
 
-	private setValues(points: { name: string, colour: string, point: Point }[]) {
+	private setValues(points: [Dataset, Point][]) {
 		let rows = []
-		for (const { name, colour, point: { value } } of points) {
+		for (const [{ name, colour }, { value }] of points) {
 			if (value != undefined && value.valueOf() != 0) rows.push(tr({},
 				td({}, 
 					div({ class: "swatch", style: `background-color: ${colour}` }),

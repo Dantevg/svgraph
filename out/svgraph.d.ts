@@ -58,12 +58,8 @@ declare class PopupElement extends HTMLElement {
     constructor();
     show(): void;
     hide(): void;
-    move(x: number, y: number): void;
-    update(x: number, y: number, t: number, range: Range<Label>, data: {
-        name: string;
-        colour: string;
-        points: Point[];
-    }[]): Point[];
+    move(x: number, y: number, anchor?: 'left' | 'right'): void;
+    update(x: number, y: number, t: number, rect: DOMRect, label: Label, data: Dataset[], points: Point[]): void;
     private setValues;
 }
 
@@ -192,17 +188,18 @@ type Styles = {
         width: number;
     };
 };
+type Dataset = {
+    name: string;
+    colour: string;
+    points: Point[];
+};
 declare class SVGraph extends HTMLElement {
     svgElem: SVGElement;
     popupElem: PopupElement;
     legendElem: LegendElement;
     guideElem: SVGElement;
     selectionElem: SVGElement;
-    data: {
-        name: string;
-        colour: string;
-        points: Point[];
-    }[];
+    data: Dataset[];
     styles: Styles;
     xaxis: Axis<Label>;
     yaxis: Axis<Label>;
@@ -232,4 +229,4 @@ declare class SVGraph extends HTMLElement {
     private isWithinGraphArea;
 }
 
-export { type Config, DateLabel, EmptyLabel, IntegerLabel, Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };
+export { type Config, type Dataset, DateLabel, EmptyLabel, IntegerLabel, Label, MetricLabel, NumberLabel, type Point, type Styles, TimeLabel, SVGraph as default };

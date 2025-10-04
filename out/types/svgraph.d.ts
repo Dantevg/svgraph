@@ -54,17 +54,18 @@ export type Styles = {
         width: number;
     };
 };
+export type Dataset = {
+    name: string;
+    colour: string;
+    points: Point[];
+};
 export default class SVGraph extends HTMLElement {
     svgElem: SVGElement;
     popupElem: PopupElement;
     legendElem: LegendElement;
     guideElem: SVGElement;
     selectionElem: SVGElement;
-    data: {
-        name: string;
-        colour: string;
-        points: Point[];
-    }[];
+    data: Dataset[];
     styles: Styles;
     xaxis: Axis<Label>;
     yaxis: Axis<Label>;

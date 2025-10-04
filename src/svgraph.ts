@@ -1,7 +1,7 @@
 import { circle, g, line, polyline, rect, svg, text } from "./util/svg"
 import { h1 } from "./util/html"
 import Range from "./util/range"
-import { DeepPartial, maxBy, maxByKey, minBy, minByKey, nearestLabel } from "./util/util"
+import { DeepPartial, maxBy, minBy, nearestLabel, nearestPointForLabel } from "./util/util"
 import { Label, Axis } from "./label"
 import PopupElement from "./popup"
 import LegendElement from "./legend"
@@ -55,6 +55,12 @@ export type Styles = {
 	}
 }
 
+export type Dataset = {
+	name: string
+	colour: string
+	points: Point[]
+}
+
 export default class SVGraph extends HTMLElement {
 	svgElem: SVGElement
 	popupElem: PopupElement
@@ -62,14 +68,14 @@ export default class SVGraph extends HTMLElement {
 	guideElem: SVGElement
 	selectionElem: SVGElement
 
-	data: { name: string, colour: string, points: Point[] }[]
+	data: Dataset[]
 	styles: Styles
 	xaxis: Axis<Label>
 	yaxis: Axis<Label>
 
 	private resizeObserver: ResizeObserver
 	private selection: { from?: number, to?: number } = {}
-	private activeData: { name: string, colour: string, points: Point[] }[]
+	private activeData: Dataset[]
 
 	get canvasCoordRange() { return new Range(this.styles.yAxis.width, this.svgElem.clientWidth) }
 
@@ -345,13 +351,16 @@ export default class SVGraph extends HTMLElement {
 	}
 
 	private handleHover(t: number, x: number, y: number, shadowRect: DOMRect, svgRect: DOMRect) {
-		const points = this.popupElem.update(x, y, t, shadowRect, this.xaxis.range, this.activeData)
+		const label = nearestLabel(t, this.xaxis.range, this.activeData)
+		const points = this.activeData.map(({ points }) => nearestPointForLabel(points, label, this.xaxis.range))
+		
+		this.popupElem.update(x, y, t, shadowRect, label, this.activeData, points)
 
 		this.guideElem.querySelectorAll(".guide-point").forEach((point, i) => {
 			point.setAttribute("cy", ((1 - this.yaxis.range.normalize(points[i].value)) * (svgRect.height - this.styles.xAxis.height)).toString())
 		})
 
-		this.guideElem.setAttribute("transform", `translate(${x}, 0)`)
+		this.guideElem.setAttribute("transform", `translate(${this.xaxis.range.normalize(label) * (svgRect.width - this.styles.yAxis.width) + this.styles.yAxis.width}, 0)`)
 		this.guideElem.removeAttribute("visibility")
 	}
 

@@ -21,3 +21,4 @@ export declare function nearestLabel(t: number, range: Range<Label>, data: {
     name: string;
     points: Point[];
 }[]): Label;
+export declare const nearestPointForLabel: (arr: Point[], to: Label, range: Range<Label>) => Point;
